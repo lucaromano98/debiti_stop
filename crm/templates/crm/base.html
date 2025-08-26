@@ -1,0 +1,35 @@
+<!-- crm/templates/crm/base.html -->
+ {% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Debiti Stop</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="layout">
+        <div class="sidebar">
+            <div class="user-info">
+                👤 {{ request.user.username }} ({{ request.user.profiloutente.ruolo|title }})
+            </div>
+            <nav class="menu">
+                <a href="{% url 'cliente_nuovo' %}">➕ Aggiungi Cliente</a>
+                <a href="{% url 'clienti_tutti' %}">Tutti i Clienti</a>
+                <a href="{% url 'clienti_legali' %}">Clienti Legali</a>
+                <a href="{% url 'clienti_attivi' %}">Clienti Attivi</a>
+                <a href="{% url 'clienti_non_attivi' %}">Clienti Non Attivi</a>
+                <form method="POST" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit">🔒 Logout</button>
+                </form>
+            </nav>
+        </div>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</body>
+</html>
+
