@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conferma Elimina</title>
+</head>
+<body>
+     {% extends "crm/base.html" %}
+    {% block content %}
+    <h2>Elimina pratica</h2>
+    <p>Eliminare la pratica <strong>{{ pratica.titolo|default:"(senza titolo)" }}</strong> del cliente {{ pratica.cliente }}?</p>
+    <form method="post">{% csrf_token %}
+        <button type="submit">Conferma</button>
+        <a href="{% url 'cliente_dettaglio' pratica.cliente.id %}">Annulla</a>
+    </form>
+    {% endblock %}
+
+</body>
+</html>

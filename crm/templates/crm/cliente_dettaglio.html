@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+        {% extends "crm/base.html" %}
+    {% block content %}
+    <h2>Cliente: {{ cliente.nome }} {{ cliente.cognome }}</h2>
+    <p><strong>Email:</strong> {{ cliente.email|default:"—" }}</p>
+    <p><strong>Telefono:</strong> {{ cliente.telefono|default:"—" }}</p>
+    <p><strong>Stato:</strong> {{ cliente.get_stato_display }}</p>
+    <p><a href="{% url 'cliente_modifica' cliente.id %}">✏️ Modifica</a> |
+    <a href="{% url 'cliente_elimina' cliente.id %}">🗑️ Elimina</a></p>
+
+    <hr />
+    <h3>Documenti</h3>
+    <p><a href="{% url 'documento_nuovo' cliente.id %}">➕ Carica documento</a></p>
+    <ul>
+    {% for d in documenti %}
+        <li>
+        <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
+        — {{ d.descrizione|default:"(senza descrizione)" }}
+        — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina</a>
+        </li>
+    {% empty %}
+        <li>Nessun documento.</li>
+    {% endfor %}
+    </ul>
+
+    <hr />
+    <h3>Pratiche</h3>
+    <p><a href="{% url 'pratica_nuova' cliente.id %}">➕ Nuova pratica</a></p>
+    <ul>
+    {% for p in pratiche %}
+        <li>
+        <strong>{{ p.titolo|default:"(senza titolo)" }}</strong>
+        — {{ p.importo|default:"—" }} — Attiva: {{ p.pratica_attiva|yesno:"Sì,No" }}
+        — <a href="{% url 'pratica_modifica' p.id %}">✏️</a>
+        — <a href="{% url 'pratica_elimina' p.id %}">🗑️</a>
+        </li>
+    {% empty %}
+        <li>Nessuna pratica.</li>
+    {% endfor %}
+    </ul>
+
+    
+        <hr />
+        <h3>Note</h3>
+
+        <p><button id="openNotaModal">➕ Aggiungi nota</button></p>
+
+       <ul>
+            {% for n in note %}
+                <li>
+                <strong>{{ n.autore_nome }}</strong> — {{ n.creata_il|date:"d/m/Y H:i" }}<br/>
+                {{ n.testo|linebreaksbr }}<br/>
+                <a href="{% url 'nota_modifica' n.id %}">✏️ Modifica</a>
+                •
+                <a href="{% url 'nota_elimina' n.id %}">🗑️ Elimina</a>
+                </li>
+            {% empty %}
+                <li>Nessuna nota.</li>
+            {% endfor %}
+        </ul>
+
+
+        <!-- MODAL: aggiungi nota -->
+        <div id="notaModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);">
+        <div style="background:#fff; max-width:520px; margin:10% auto; padding:16px; border-radius:8px; position:relative;">
+            <h4>Nuova nota</h4>
+            <form method="post" action="{% url 'nota_crea' cliente.id %}">
+            {% csrf_token %}
+            <p>
+                <label for="id_autore_nome">Nome</label><br/>
+                {{ nota_form.autore_nome }}
+            </p>
+            <p>
+                <label for="id_testo">Nota</label><br/>
+                {{ nota_form.testo }}
+            </p>
+            <div style="margin-top:8px;">
+                <button type="submit">Salva</button>
+                <button type="button" id="closeNotaModal">Annulla</button>
+            </div>
+            </form>
+        </div>
+        </div>
+
+        <script>
+        (function(){
+            const openBtn = document.getElementById('openNotaModal');
+            const closeBtn = document.getElementById('closeNotaModal');
+            const modal = document.getElementById('notaModal');
+            if(openBtn && modal){
+            openBtn.addEventListener('click', function(){ modal.style.display = 'block'; });
+            }
+            if(closeBtn && modal){
+            closeBtn.addEventListener('click', function(){ modal.style.display = 'none'; });
+            }
+            // chiudi cliccando sullo sfondo scuro
+            if(modal){
+            modal.addEventListener('click', function(e){
+                if(e.target === modal){ modal.style.display = 'none'; }
+            });
+            }
+        })();
+        </script>
+
+
+
+    <p><a href="{% url 'clienti_tutti' %}">⬅️ Torna alla lista</a></p>
+    {% endblock %}
+</body>
+</html>

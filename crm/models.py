@@ -65,4 +65,22 @@ class ProfiloUtente(models.Model):
 
     def __str__(self):
         return f"{self.utente.username} - {self.ruolo}"
+    
+
+# --- NOTES OPERATORI ---
+
+class Nota(models.Model):
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.CASCADE,
+        related_name="note_entries"   # NON deve essere "note"
+    )
+    autore_nome = models.CharField(max_length=100)
+    testo = models.TextField()
+    creata_il = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Nota {self.id} per {self.cliente} – {self.autore_nome}"
+
+
 

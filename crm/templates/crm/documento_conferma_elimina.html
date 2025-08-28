@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+        {% extends "crm/base.html" %}
+    {% block content %}
+    <h2>Elimina documento</h2>
+    <p>Eliminare <strong>{{ doc.file.name|slice:'-60:' }}</strong> del cliente {{ doc.cliente }}?</p>
+    <form method="post">{% csrf_token %}
+        <button type="submit">Conferma</button>
+        <a href="{% url 'cliente_dettaglio' doc.cliente.id %}">Annulla</a>
+    </form>
+    {% endblock %}
+
+</body>
+</html>

@@ -14,16 +14,30 @@
 
         <table border="1" cellpadding="6">
             <tr>
-            <th>Nome</th><th>Cognome</th><th>Email</th><th>Telefono</th><th>Stato</th><th>Creato</th>
+            <th>Nome</th>
+            <th>Cognome</th>
+            <th>Email</th>
+            <th>Telefono</th>
+            <th>Residenza</th>
+            <th>Esperienza Finanziaria</th>
+            <th>Visure</th>
+            <th>Stato</th>
+            <th>Creato</th>
+            <th>Azioni</th>
+
             </tr>
             {% for c in clienti %}
             <tr>
-            <td>{{ c.nome }}</td>
-            <td>{{ c.cognome }}</td>
+            <td>{{ c.nome }}</a></td>
+            <td>{{ c.cognome }}</a></td>
             <td>{{ c.email|default:"—" }}</td>
             <td>{{ c.telefono|default:"—" }}</td>
+            <td>{{ c.residenza|default:"—" }}</td>
+            <td>{{ c.esperienza_finanziaria|default:"—" }}</td>
+            <td>{{ c.visure|default:"—" }}</td>
             <td>{{ c.get_stato_display }}</td>
             <td>{{ c.data_creazione|date:"d/m/Y H:i" }}</td>
+            <td><a href="{% url 'cliente_dettaglio' c.id %}">Apri</a></td>
             </tr>
             {% empty %}
             <tr><td colspan="6">Nessun cliente.</td></tr>

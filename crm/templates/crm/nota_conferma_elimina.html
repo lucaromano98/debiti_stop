@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+        {% extends "crm/base.html" %}
+    {% block content %}
+    <h2>Elimina nota</h2>
+    <p>Eliminare la nota di <strong>{{ nota.autore_nome }}</strong> del {{ nota.creata_il|date:"d/m/Y H:i" }}?</p>
+    <p><em>{{ nota.testo|linebreaksbr }}</em></p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Conferma</button>
+        <a href="{% url 'cliente_dettaglio' nota.cliente.id %}">Annulla</a>
+    </form>
+    {% endblock %}
+
+</body>
+</html>

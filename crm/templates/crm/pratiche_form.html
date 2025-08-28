@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratiche</title>
+</head>
+<body>
+    
+     {% extends "crm/base.html" %}
+    {% block content %}
+    <h2>{% if is_edit %}Modifica pratica{% else %}Nuova pratica{% endif %} — {{ cliente.nome }} {{ cliente.cognome }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">{% if is_edit %}Salva modifiche{% else %}Crea pratica{% endif %}</button>
+    </form>
+    <p><a href="{% url 'cliente_dettaglio' cliente.id %}">Torna al dettaglio cliente</a></p>
+    {% endblock %}
+
+
+</body>
+</html>
