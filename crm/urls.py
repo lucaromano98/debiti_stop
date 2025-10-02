@@ -1,5 +1,6 @@
 from django.urls import path, include
 from django.contrib.auth.views import LogoutView
+from django.contrib.auth import views as auth_views
 from .views import CustomLoginView, lead_toggle_no_risposta, lead_toggle_consulenza, lead_toggle_msg,lead_modifica,lead_lista, lead_nuovo, documenti_zip_cliente, dashboard, home_redirect, clienti_tutti, clienti_legali, clienti_attivi, clienti_non_attivi, cliente_nuovo, clienti_dettaglio, cliente_modifica, cliente_elimina, documento_nuovo, documento_elimina, pratica_nuova, pratica_modifica, pratica_elimina
 from .views import nota_crea, nota_modifica, nota_elimina
 from rest_framework.routers import DefaultRouter
@@ -16,6 +17,20 @@ urlpatterns = [
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('dashboard/', dashboard, name='dashboard'),
+
+    # Reset password (4 step classici)
+    path('password-reset/', 
+         auth_views.PasswordResetView.as_view(template_name='crm/password_reset_form.html'),
+         name='password_reset'),
+    path('password-reset/done/', 
+         auth_views.PasswordResetDoneView.as_view(template_name='crm/password_reset_done.html'),
+         name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', 
+         auth_views.PasswordResetConfirmView.as_view(template_name='crm/password_reset_confirm.html'),
+         name='password_reset_confirm'),
+    path('reset/done/', 
+         auth_views.PasswordResetCompleteView.as_view(template_name='crm/password_reset_complete.html'),
+         name='password_reset_complete'),
 
     # Clienti
     path('clienti/', clienti_tutti, name='clienti_tutti'),

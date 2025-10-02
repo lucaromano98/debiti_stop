@@ -1,8 +1,8 @@
 /* ========== PALETTE ========== */
 :root{
-  --bg: #0b0f12;          /* nero di base */
-  --surface: #0f141a;     /* nero + */
-  --panel: #121923;       /* nero pannelli */
+  --bg: #0b0f12;
+  --surface: #0f141a;
+  --panel: #121923;
   --border: rgba(255,255,255,.08);
 
   --text: #e8f0ff;
@@ -13,71 +13,135 @@
   --cyan-600:#0891b2;
   --cyan-700:#0e7490;
 
-  --orange-500:#d97706;   /* arancione “scuro” caldo */
+  --orange-500:#d97706;
   --orange-600:#b45309;
   --orange-700:#92400e;
 
   --success:#22c55e;
   --danger:#ef4444;
   --warning:#f59e0b;
+
+  /* aggiunte/fix */
+  --radius: 18px;
+  --c-primary: var(--cyan-500);
+  --c-muted: var(--muted);
+
+  /* sidebar sizing */
+  --sb-w: 260px;
+  --sb-w-collapsed: 76px;
 }
 
 /* ========== RESET / BASE ========== */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
-  color:var(--text); background:var(--bg);
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+  color:var(--text);
+  background:var(--bg);
 }
 
 /* ========== LAYOUT ========== */
-.layout{display:grid; grid-template-columns:260px 1fr; min-height:100vh}
-
-.sidebar{
-  position:sticky; top:0; height:100svh; padding:16px 14px;
-  background:linear-gradient(180deg, var(--surface), var(--bg));
-  border-right:1px solid var(--border);
-  display:flex; flex-direction:column; gap:14px;
-  backdrop-filter: blur(6px);
+.layout{
+  display:grid;
+  grid-template-columns: var(--sb-w) 1fr;
+  min-height:100vh;
 }
-.content{min-height:100svh; padding:28px clamp(16px,2vw,32px); max-width:1200px}
+.content{
+  min-height:100svh;
+  padding:28px clamp(16px,2vw,32px);
+  max-width:1200px;
+}
 
-/* brand */
-.brand{display:flex; align-items:center; gap:10px; font-weight:700}
+/* ===== Sidebar Pro ===== */
+.sidebar{
+  width: var(--sb-w);
+  position: sticky; top: 0; height: 100svh;
+  padding: 16px 12px;
+  background: linear-gradient(180deg, var(--surface), var(--bg));
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 14px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.sb-top{ display:flex; align-items:center; justify-content:space-between; gap:6px }
+.brand{ display:flex; align-items:center; gap:10px; font-weight:700 }
 .logo{
   display:grid; place-items:center; width:36px; height:36px; border-radius:10px;
   background: conic-gradient(from 200deg, var(--cyan-500), var(--orange-600));
   color:#001018; font-weight:800;
 }
-.brand-text{color:#fff}
+.brand-text{ color:#fff }
 
-/* user box */
+.sb-toggle{
+  width:34px; height:34px; border-radius:10px; border:1px solid var(--border);
+  background: rgba(255,255,255,.05); color:#cfd3df; display:grid; place-items:center; cursor:pointer;
+}
+.sb-toggle:hover{ background: rgba(255,255,255,.10) }
+
 .user-info{
   font-size:.93rem; color:#cfd3df; padding:10px 12px; border-radius:12px;
-  background:rgba(255,255,255,.04); border:1px solid var(--border)
+  background:rgba(255,255,255,.04); border:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
 }
-.user-info .role{color:var(--muted)}
+.user-info .role{ color:var(--muted) }
 
-/* ========== NAV / SIDEBAR LINKS ========== */
-.menu{display:flex; flex-direction:column; gap:6px}
+.menu{ display:flex; flex-direction:column; gap:6px; flex:1 1 auto; min-height:0; }
 .menu-link{
-  display:block; padding:10px 12px; border-radius:12px; text-decoration:none;
+  position: relative;
+  display:flex; align-items:center; gap:10px;
+  padding: 10px 12px; border-radius: 12px; text-decoration: none;
   color:#dfe3ee; border:1px solid transparent; transition:.15s;
 }
-.menu-link:hover{background:rgba(6,182,212,.08); color:#fff}
+.menu-link .icon{ width:22px; display:grid; place-items:center; opacity:.95 }
+.menu-link:hover{ background: rgba(6,182,212,.08); color:#fff }
 .menu-link.is-active{
-  background:rgba(6,182,212,.12); color:#fff; border-color:rgba(6,182,212,.22);
-  box-shadow: inset 3px 0 0 0 var(--cyan-500);
+  background: rgba(6,182,212,.12); color:#fff; border-color: rgba(6,182,212,.22);
+}
+.menu-link.is-active::before{
+  content:""; position:absolute; left:6px; top:8px; bottom:8px; width:4px; border-radius:4px;
+  background: linear-gradient(180deg, var(--cyan-400), var(--cyan-700));
 }
 
-/* logout */
-.logout-form{margin-top:8px}
+.sb-footer{ margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border) }
+.logout-form{ margin-top:8px }
 .logout-btn{
   width:100%; padding:10px 12px; border-radius:12px; cursor:pointer;
   border:1px solid var(--border); color:#fff;
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+  display:flex; align-items:center; gap:10px; justify-content:center;
 }
-.logout-btn:hover{border-color:rgba(255,255,255,.16); background:rgba(255,255,255,.10)}
+.logout-btn:hover{ border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.10) }
+
+/* Collapsed mode */
+body.sidebar-collapsed .layout{ grid-template-columns: var(--sb-w-collapsed) 1fr; }
+body.sidebar-collapsed .sidebar{ width: var(--sb-w-collapsed); padding: 16px 10px; }
+body.sidebar-collapsed .brand-text,
+body.sidebar-collapsed .menu .label,
+body.sidebar-collapsed .user-info .label,
+body.sidebar-collapsed .logout-btn .label{
+  width:0; opacity:0; transform: translateX(-6px);
+  pointer-events:none; white-space:nowrap; overflow:hidden;
+  transition: opacity .15s, transform .15s;
+}
+.sidebar .label{ transition: opacity .15s, transform .15s; }
+
+/* Tooltip semplice quando collassato */
+body.sidebar-collapsed .menu-link:hover::after,
+body.sidebar-collapsed .logout-btn:hover::after{
+  content: attr(data-label);
+  position: fixed;
+  left: calc(var(--sb-w-collapsed) + 12px);
+  background: rgba(0,0,0,.9);
+  color:#fff; padding:6px 8px; border-radius:8px; font-size:.9rem;
+  border:1px solid rgba(255,255,255,.12);
+  transform: translateY(-2px);
+}
+
+/* Scrollbar più elegante */
+.sidebar::-webkit-scrollbar{ width:8px }
+.sidebar::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.12); border-radius:9999px }
+.sidebar::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.18) }
 
 /* ========== BUTTONS ========== */
 .btn{
@@ -87,25 +151,20 @@ body{
 }
 .btn:hover{background:rgba(255,255,255,.10)}
 .btn:focus-visible{outline:2px solid var(--cyan-500); outline-offset:2px}
-
 .btn-primary{
   background:linear-gradient(180deg, var(--cyan-500), var(--cyan-600));
   border-color:transparent; color:#001018;
 }
 .btn-primary:hover{filter:brightness(1.05)}
-
 .btn-warning{
   background:linear-gradient(180deg, var(--orange-500), var(--orange-600));
   border-color:transparent; color:#1a0e00;
 }
-.btn-outline{
-  background:transparent; border-color:var(--border); color:var(--text);
-}
-.btn-ghost{
-  background:transparent; border-color:transparent; color:var(--text);
-}
+.btn-outline{ background:transparent; border-color:var(--border); color:var(--text); }
+.btn-ghost{ background:transparent; border-color:transparent; color:var(--text); }
+.w-100{ width:100% }
 
-/* ========== FORMS ========== */
+/* ========== FORMS (generale) ========== */
 label{color:var(--muted); font-size:.92rem}
 input[type=text],input[type=email],input[type=tel],input[type=date],
 input[type=datetime-local],select,textarea{
@@ -128,6 +187,7 @@ input:focus,select:focus,textarea:focus{
 }
 .table tbody tr:nth-child(odd){background:rgba(255,255,255,.03)}
 .table tbody tr:hover{background:rgba(6,182,212,.06)}
+.table-wrap{ overflow-x:auto }
 
 /* ========== CARDS / PANELS ========== */
 .card{
@@ -164,3 +224,65 @@ h1,h2,h3{margin:0 0 12px}
   .layout{grid-template-columns:1fr}
   .sidebar{position:relative;height:auto}
 }
+
+/* ======= AUTH (Login) ======= */
+.auth{
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(14,165,177,.25), transparent 60%),
+    radial-gradient(1000px 500px at 110% 110%, rgba(192,86,33,.18), transparent 55%),
+    linear-gradient(180deg, #0f1115 0%, #0b0f14 100%);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.auth-wrap{ width: 100%; max-width: 460px; }
+.auth-card{
+  padding: 28px 24px;
+  border-radius: var(--radius, 18px);
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.06);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+}
+.auth-head{ text-align: center; margin-bottom: 18px; }
+.auth-logo .brand{ font-weight: 800; font-size: 1.35rem; letter-spacing: .2px; }
+.auth-logo .brand-accent{ color: var(--c-primary, #06b6d4); }
+.auth-title{ margin: 10px 0 4px; font-size: 1.6rem; font-weight: 800; }
+.auth-sub{ margin: 0 0 12px; color: var(--c-muted, #9aa6b2); font-size: .98rem; }
+
+.auth-form .form-control,
+.auth-form select,
+.auth-form textarea{
+  height: 44px;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e9eef5;
+  border-radius: 12px;
+}
+.auth-form .form-control:focus{
+  outline: none;
+  border-color: rgba(14,165,177,.55);
+  box-shadow: 0 0 0 4px rgba(14,165,177,.18);
+  background: rgba(255,255,255,.045);
+}
+/* >>> Forza layout form verticale nella login <<< */
+.auth-form .row,
+.auth-form .form-group,
+.auth-form .mb-3,
+.auth-form .form-floating{ display:block !important; width:100% !important; margin:0 0 12px 0 !important; }
+.auth-form [class^="col-"], .auth-form .col, .auth-form .col-auto{ width:100% !important; max-width:100% !important; padding:0 !important; float:none !important; }
+.auth-form label{ display:block !important; margin-bottom:6px !important; color:var(--muted); font-weight:600; }
+
+.auth .btn{ border-radius:14px; font-weight:700; }
+.auth .btn-primary{ background: linear-gradient(180deg, var(--cyan-500), var(--cyan-600)); border:none; }
+.auth .btn-primary:hover{ filter:brightness(1.06); }
+
+.auth-foot{ margin-top: 14px; text-align: center; }
+.auth-foot .muted{ color: var(--c-muted, #9aa6b2); font-size: .95rem; text-decoration: underline; text-underline-offset: 2px; }
+
+/* niente colonna sidebar nella pagina auth (extra-sicurezza) */
+/* Nascondi sidebar nel login */
+body.auth .sidebar { display: none !important; }
+body.auth .layout  { grid-template-columns: 1fr !important; }
+

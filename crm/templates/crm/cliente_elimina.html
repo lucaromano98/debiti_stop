@@ -1,0 +1,20 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Elimina cliente{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:680px; padding:16px;">
+  <h2>Elimina cliente</h2>
+  <p>
+    Sei sicuro di voler eliminare
+    <strong>{{ cliente.nome }} {{ cliente.cognome }}</strong>?<br>
+    <span class="text-muted">Verranno rimossi anche documenti e pratiche collegate.</span>
+  </p>
+
+  <form method="post" style="display:flex; gap:10px; margin-top:12px;">
+    {% csrf_token %}
+    <a href="{% url 'cliente_dettaglio' cliente.id %}" class="btn btn-outline">Annulla</a>
+    <button type="submit" class="btn btn-warning">Conferma eliminazione</button>
+  </form>
+</div>
+{% endblock %}
