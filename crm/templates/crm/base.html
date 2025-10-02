@@ -1,35 +1,59 @@
-<!-- crm/templates/crm/base.html -->
- {% load static %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <title>Debiti Stop</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Debiti Stop{% endblock %}</title>
+
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v={% now 'U' %}">
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <div class="layout">
-        <div class="sidebar">
-            <div class="user-info">
-                👤 {{ request.user.username }} ({{ request.user.profiloutente.ruolo|title }})
-            </div>
-            <nav class="menu">
-                <a href="{% url 'cliente_nuovo' %}">➕ Aggiungi Cliente</a>
-                <a href="{% url 'clienti_tutti' %}">Tutti i Clienti</a>
-                <a href="{% url 'clienti_legali' %}">Clienti Legali</a>
-                <a href="{% url 'clienti_attivi' %}">Clienti Attivi</a>
-                <a href="{% url 'clienti_non_attivi' %}">Clienti Non Attivi</a>
-                <form method="POST" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit">🔒 Logout</button>
-                </form>
-            </nav>
-        </div>
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="brand">
+        <span class="logo">DS</span>
+        <span class="brand-text">Debiti Stop</span>
+      </div>
 
-        <div class="content">
-            {% block content %}{% endblock %}
-        </div>
+      {% with current=request.resolver_match.url_name %}
+      <div class="user-info">
+        👤 {{ request.user.username }}
+        {% if request.user.profiloutente and request.user.profiloutente.ruolo %}
+          <span class="role">({{ request.user.profiloutente.ruolo|title }})</span>
+        {% endif %}
+      </div>
+
+      <nav class="menu">
+        <a href="{% url 'cliente_nuovo' %}"  class="menu-link {% if current == 'cliente_nuovo' %}is-active{% endif %}">➕ Aggiungi Cliente</a>
+        <a href="{% url 'lead_nuovo' %}"     class="menu-link {% if current == 'lead_nuovo' %}is-active{% endif %}">➕ Possibile Cliente</a>
+        <a href="{% url 'clienti_tutti' %}"  class="menu-link {% if current == 'clienti_tutti' %}is-active{% endif %}">Tutti i Clienti</a>
+        <a href="{% url 'lead_lista' %}"     class="menu-link {% if current == 'lead_lista' %}is-active{% endif %}">Possibili clienti</a>
+
+        <form method="POST" action="{% url 'logout' %}" class="logout-form">
+          {% csrf_token %}
+          <button type="submit" class="logout-btn">🔒 Logout</button>
+        </form>
+      </nav>
+      {% endwith %}
     </div>
+
+    <!-- Content -->
+    <div class="content">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="msg msg-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>
-

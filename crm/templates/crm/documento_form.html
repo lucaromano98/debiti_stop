@@ -8,12 +8,35 @@
 <body>
         {% extends "crm/base.html" %}
     {% block content %}
-    <h2>Carica documento per: {{ cliente.nome }} {{ cliente.cognome }}</h2>
-    <form method="post" enctype="multipart/form-data">
+    <h2>Carica documento — {{ cliente.nome }} {{ cliente.cognome }}</h2>
+
+    <form method="post" enctype="multipart/form-data">  <!-- enctype OBBLIGATORIO -->
         {% csrf_token %}
-        {{ form.as_p }}
+        {% if messages %}
+        <ul>
+            {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if form.errors %}
+        <div style="color:red">{{ form.errors }}</div>
+        {% endif %}
+
+        <p>
+        <label for="{{ form.categoria.id_for_label }}">Tipologia documento</label><br>
+        {{ form.categoria }}
+        </p>
+        <p>
+        <label for="{{ form.file.id_for_label }}">File</label><br>
+        {{ form.file }}
+        </p>
+        <p>
+        <label for="{{ form.descrizione.id_for_label }}">Descrizione</label><br>
+        {{ form.descrizione }}
+        </p>
         <button type="submit">Carica</button>
     </form>
+
     <p><a href="{% url 'cliente_dettaglio' cliente.id %}">Torna al dettaglio</a></p>
     {% endblock %}
 

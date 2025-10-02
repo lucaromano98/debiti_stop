@@ -9,6 +9,10 @@
         {% extends "crm/base.html" %}
     {% block content %}
     <h2>Cliente: {{ cliente.nome }} {{ cliente.cognome }}</h2>
+    <p>
+        <strong>Folder Cliente:</strong>
+        clienti/{{ cliente.id }}_{{ cliente.nome|slugify }}-{{ cliente.cognome|slugify }}/
+    </p>
     <p><strong>Email:</strong> {{ cliente.email|default:"—" }}</p>
     <p><strong>Telefono:</strong> {{ cliente.telefono|default:"—" }}</p>
     <p><strong>Stato:</strong> {{ cliente.get_stato_display }}</p>
@@ -16,21 +20,88 @@
     <a href="{% url 'cliente_elimina' cliente.id %}">🗑️ Elimina</a></p>
 
     <hr />
-    <h3>Documenti</h3>
-    <p><a href="{% url 'documento_nuovo' cliente.id %}">➕ Carica documento</a></p>
-    <ul>
-    {% for d in documenti %}
-        <li>
-        <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
-        — {{ d.descrizione|default:"(senza descrizione)" }}
-        — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina</a>
-        </li>
-    {% empty %}
-        <li>Nessun documento.</li>
-    {% endfor %}
-    </ul>
+        <h3>Documenti</h3>
+        <p>
+            <a href="{% url 'documento_nuovo' cliente.id %}">➕ Carica documento</a>
+            |
+            <a href="{% url 'documenti_zip_cliente' cliente.id %}">⬇️ Scarica tutti (ZIP)</a>
+            </p>
 
+        <div class="tabs" style="display:flex; gap:12px; margin-bottom:8px;">
+            <button type="button" class="tab-btn" data-target="#tab-anag">Documenti anagrafici</button>
+            <button type="button" class="tab-btn" data-target="#tab-prat">Pratiche</button>
+            <button type="button" class="tab-btn" data-target="#tab-leg">Atti legali</button>
+        </div>
+
+            <h4> Tutti i documenti del cliente</h4>
+            <ul>
+            {% for d in cliente.documenti.all %}
+                <li>
+                ID {{ d.id }} — {{ d.get_categoria_display }} — {{ d.file.name }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                </li>
+            {% empty %}
+                <li>(nessun documento)</li>
+            {% endfor %}
+            </ul>
+
+
+
+        <div id="tab-anag" class="tab-panel">
+        <ul>
+            {% for d in docs_anag %}
+            <li>
+                <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
+                — {{ d.descrizione|default:"(senza descrizione)" }}
+                — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina</a>
+            </li>
+            {% empty %}
+            <li>Nessun documento anagrafico.</li>
+            {% endfor %}
+        </ul>
+        </div>
+
+        <div id="tab-prat" class="tab-panel" style="display:none;">
+        <ul>
+            {% for d in docs_prat %}
+            <li>
+                <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
+                — {{ d.descrizione|default:"(senza descrizione)" }}
+                — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina </a>
+            </li>
+            {% empty %}
+            <li>Nessun documento di pratica.</li>
+            {% endfor %}
+        </ul>
+        </div>
+
+        <div id="tab-leg" class="tab-panel" style="display:none;">
+        <ul>
+            {% for d in docs_leg %}
+            <li>
+                <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
+                — {{ d.descrizione|default:"(senza descrizione)" }}
+                — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina</a>
+            </li>
+            {% empty %}
+            <li>Nessun atto legale.</li>
+            {% endfor %}
+        </ul>
+        </div>
     <hr />
+    <script>
+        (function(){
+            const btns = document.querySelectorAll('.tab-btn');
+            const panels = document.querySelectorAll('.tab-panel');
+            btns.forEach(btn => btn.addEventListener('click', () => {
+            panels.forEach(p => p.style.display = 'none');
+            document.querySelector(btn.dataset.target).style.display = 'block';
+            }));
+        })();
+    </script>
+
     <h3>Pratiche</h3>
     <p><a href="{% url 'pratica_nuova' cliente.id %}">➕ Nuova pratica</a></p>
     <ul>

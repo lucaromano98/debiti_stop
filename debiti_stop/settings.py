@@ -39,7 +39,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'crm'
+    'crm',
+    'rest_framework',
+    'corsheaders',
+    "crispy_forms",
+    "crispy_bootstrap5",
+    "django_tables2",
+    "django_filters",
+    "jazzmin",
 ]
 
 MIDDLEWARE = [
@@ -50,7 +57,17 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    )
+}
 
 ROOT_URLCONF = 'debiti_stop.urls'
 
@@ -76,14 +93,15 @@ WSGI_APPLICATION = 'debiti_stop.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+   'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'debiti_stop',
         'USER': 'root',
         'PASSWORD': 'root',
         'HOST': 'localhost',
-        'PORT': '3306'
-    }
+        'PORT': '3306',
+        'OPTIONS': {"charset": "utf8mb4"}
+   }
 }
 
 

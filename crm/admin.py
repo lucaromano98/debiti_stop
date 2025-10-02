@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cliente, DocumentoCliente, Pratiche, ProfiloUtente
+from .models import Cliente, DocumentoCliente, Pratiche, ProfiloUtente, Lead
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -22,3 +22,9 @@ class PraticheAdmin(admin.ModelAdmin):
 class ProfiloUtenteAdmin(admin.ModelAdmin):
     list_display = ("utente", "ruolo")
     list_filter = ("ruolo",)
+
+@admin.register(Lead)
+class LeadAdmin(admin.ModelAdmin):
+    list_display = ("id", "nome", "cognome", "stato", "appuntamento_previsto", "creato_il")
+    list_filter = ("stato", "creato_il")
+    search_fields = ("nome", "cognome", "telefono", "email")

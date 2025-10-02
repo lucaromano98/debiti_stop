@@ -1,0 +1,119 @@
+{% extends "crm/base.html" %}
+{% block content %}
+  <h2>Lead </h2>
+  
+  
+  <div class="card">
+      <p><a href="{% url 'lead_nuovo' %}">➕ Aggiungi Possibile Cliente</a></p>
+    
+      <form method="get" style="margin:10px 0; display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" name="q" value="{{ q }}" placeholder="Cerca nome, email, telefono">
+          <select name="stato">
+              <option value="">Tutti gli stati</option>
+              <option value="in_corso"  {% if stato == "in_corso" %}selected{% endif %}>In corso</option>
+              <option value="negativo"  {% if stato == "negativo" %}selected{% endif %}>Esito negativo</option>
+              <option value="positivo"  {% if stato == "positivo" %}selected{% endif %}>Esito positivo</option>
+          </select>
+          <input type="date" name="dal" value="{{ dal }}">
+          <input type="date" name="al"  value="{{ al }}">
+          <button type="submit">Filtra</button>
+          <a href="{% url 'lead_lista' %}">Reset</a>
+      </form>
+
+      
+      <table border="1" cellpadding="6" cellspacing="0" class="table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th><a href="?sort=nome">Nome ▲</a> | <a href="?sort=-nome">▼</a></th>
+                <th><a href="?sort=cognome">Cognome ▲</a> | <a href="?sort=-cognome">▼</a></th>
+                <th>Telefono</th>
+                <th>Email</th>
+                <th><a href="?sort=stato">Stato ▲</a> | <a href="?sort=-stato">▼</a></th>
+                <th>Prossimo appuntamento</th>
+                {% if ha_negativi %}
+                <th>Azioni</th>
+                {% endif %}
+                <th>Note operatori</th>
+                <th><a href="?sort=creato_il">Creato il ▲</a> | <a href="?sort=-creato_il">▼</a></th>
+                <th>Gestione</th>
+            </tr>
+        </thead>
+    
+    
+          <tbody>
+              {% for l in leads %}
+              <tr>
+                  <td>{{ l.id }}</td>
+                  <td>{{ l.nome }}</td>
+                  <td>{{ l.cognome }}</td>
+                  <td>{{ l.telefono|default:"—" }}</td>
+                  <td>{{ l.email|default:"—" }}</td>
+                  <td>{{ l.get_stato_display }}</td>
+                  <td>
+                      {% if l.stato == "in_corso" %}
+                          {% if l.appuntamento_previsto %}
+                              {{ l.appuntamento_previsto|date:"d/m/Y H:i" }}
+                          {% else %}—{% endif %}
+                      {% else %}
+                          {{ l.motivazione_negativa|default:"—" }}
+                      {% endif %}
+                  </td>
+    
+                  <!-- Colonna con le checkbox -->
+                  <td>
+                      <!-- Consulenza effettuata
+                      <form method="post" action="{% url 'lead_toggle_consulenza' l.id %}" style="display:inline-block; margin-right:8px;">
+                          {% csrf_token %}
+                          <label style="cursor:pointer;">
+                              <input type="checkbox" onchange="this.form.submit()" {% if l.consulenza_effettuata %}checked{% endif %}>
+                              Consulenza effettuata
+                          </label>
+                      </form>
+    
+                      No risposta -->
+                      <!-- <form method="post" action="{% url 'lead_toggle_no_risposta' l.id %}" style="display:inline-block; margin-right:8px;">
+                          {% csrf_token %}
+                          <label style="cursor:pointer;">
+                              <input type="checkbox" onchange="this.form.submit()" {% if l.no_risposta %}checked{% endif %}>
+                              No risposta
+                          </label>
+                      </form> -->
+                     
+    
+                      <!-- Messaggio inviato: VISIBILE SOLO SE esito negativo -->
+                      {% if l.stato == "negativo" %}
+                      <form method="post" action="{% url 'lead_toggle_msg' l.id %}" style="display:inline-block;">
+                          {% csrf_token %}
+                          <label style="cursor:pointer;">
+                              <input type="checkbox" onchange="this.form.submit()" {% if l.messaggio_inviato %}checked{% endif %}>
+                              Messaggio inviato
+                          </label>
+                      </form>
+                      {% endif %}
+                  </td>
+    
+                  <td style="max-width:280px;">{{ l.note_operatori|default:"—" }}</td>
+                  <td>{{ l.creato_il|date:"d/m/Y H:i" }}</td>
+                  <td><a href="{% url 'lead_modifica' l.id %}">Modifica</a></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="11">Nessun lead presente.</td></tr>
+              {% endfor %}
+          </tbody>
+      </table>
+  </div>
+
+
+  {% if page_obj.paginator.num_pages > 1 %}
+      <div style="margin-top:10px; display:flex; gap:6px;">
+          {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&stato={{ stato }}&dal={{ dal }}&al={{ al }}">« Prec</a>
+          {% endif %}
+          <span>Pagina {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&stato={{ stato }}&dal={{ dal }}&al={{ al }}">Succ »</a>
+          {% endif %}
+      </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "crm/base.html" %}
+{% block content %}
+  <h2>{% if is_edit %}Modifica {% else %} Nuovo Lead{% endif %}</h2>
+  
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <p>
+        <label for="{{ form.nome.id_for_label }}">Nome</label><br>
+        {{ form.nome }}
+      </p>
+      <p>
+        <label for="{{ form.cognome.id_for_label }}">Cognome</label><br>
+        {{ form.cognome }}
+      </p>
+      <p>
+        <label for="{{ form.telefono.id_for_label }}">Telefono</label><br>
+        {{ form.telefono }}
+      </p>
+      <p>
+        <label for="{{ form.email.id_for_label }}">Email</label><br>
+        {{ form.email }}
+      </p>
+      <p style="grid-column:1 / -1;">
+        <label for="{{ form.stato.id_for_label }}">Stato</label><br>
+        {{ form.stato }}
+      </p>
+
+      <!-- Blocco che appare se stato = in_corso -->
+      <div id="blk-app" style="grid-column:1 / -1; display:none;">
+        <label for="{{ form.appuntamento_previsto.id_for_label }}">Appuntamento previsto</label><br>
+        {{ form.appuntamento_previsto }}
+        <small>Seleziona data e ora</small>
+      </div>
+
+      <!-- Blocco che appare se stato = negativo -->
+      <div id="blk-motivo" style="grid-column:1 / -1; display:none;">
+        <label for="{{ form.motivazione_negativa.id_for_label }}">Motivazione (esito negativo)</label><br>
+        {{ form.motivazione_negativa }}
+      </div>
+
+      <p style="grid-column:1 / -1;">
+        <label for="{{ form.note_operatori.id_for_label }}">Note per operatori</label><br>
+        {{ form.note_operatori }}
+      </p>
+    </div>
+
+    {% if form.errors %}
+      <div style="color:#b00; margin-top:8px;">{{ form.errors }}</div>
+    {% endif %}
+
+    <div style="margin-top:12px;">
+      <button type="submit">{% if is_edit %}Salva modifiche{% else %}Salva lead{% endif %}</button>
+      <a href="{% url 'lead_lista' %}">Annulla</a>
+    </div>
+  </form>
+
+    <script>
+        (function(){
+            const stato = document.getElementById("id_stato");
+            const blkApp = document.getElementById("blk-app");
+            const blkMot = document.getElementById("blk-motivo");
+
+            function toggleBlocks() {
+            const v = stato.value;
+            if (v === "in_corso") {
+                blkApp.style.display = "block";
+                blkMot.style.display = "none";
+            } else if (v === "negativo") {
+                blkApp.style.display = "none";
+                blkMot.style.display = "block";
+            } else { // v === "positivo" o altro
+                blkApp.style.display = "none";
+                blkMot.style.display = "none";
+            }
+            }
+
+            if (stato) {
+            toggleBlocks();
+            stato.addEventListener("change", toggleBlocks);
+            }
+        })();
+    </script>
+
+{% endblock %}
