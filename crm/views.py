@@ -32,24 +32,38 @@ def dashboard(request):
 
 # --- Ruoli / permessi helper ---
 def is_operatore(user):
-    """
-    True se l'utente è autenticato e ha un ruolo operativo (non admin).
-    """
+    """Compat: usato solo se davvero ti serve distinguere operatori/legali."""
     prof = getattr(user, "profiloutente", None)
     return user.is_authenticated and (prof and prof.ruolo in ["operatore", "legale"])
 
 
 def has_portal_access(user):
-    """Possono usare il portale: admin, operatore, legale."""
-    return hasattr(user, "profiloutente") and user.profiloutente.ruolo in ["admin", "operatore", "legale"]
+    """
+    Accesso pieno al portale per:
+      - superuser SEMPRE (anche senza ProfiloUtente)
+      - profilo con ruolo in {"admin","operatore","legale"}
+    """
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    prof = getattr(user, "profiloutente", None)
+    return bool(prof and prof.ruolo in ["admin", "operatore", "legale"])
 
 
 def is_admin(user):
-    return hasattr(user, "profiloutente") and user.profiloutente.ruolo == "admin"
+    """Admin vero se superuser oppure profilo.ruolo == 'admin'."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    prof = getattr(user, "profiloutente", None)
+    return bool(prof and prof.ruolo == "admin")
 
 
 # --- Clienti ---
 @login_required
+@user_passes_test(has_portal_access)
 def clienti_tutti(request):
     qs = Cliente.objects.all().order_by("-data_creazione")
 
@@ -81,7 +95,7 @@ def clienti_tutti(request):
 
     # --- SORT opzionale ---
     sort = request.GET.get("sort", "")
-    allowed = {"nome", "-nome", "cognome", "-cognome", "creato_il", "-creato_il"}
+    allowed = {"nome", "-nome", "cognome", "-cognome", "data_creazione", "-data_creazione"}
     if sort in allowed:
         qs = qs.order_by(sort)
 
@@ -99,21 +113,21 @@ def clienti_tutti(request):
 
 
 @login_required
-@user_passes_test(is_operatore)
+@user_passes_test(has_portal_access)
 def clienti_legali(request):
     clienti = Cliente.objects.filter(stato="legal")
     return render(request, "crm/clienti_legali.html", {"clienti": clienti})
 
 
 @login_required
-@user_passes_test(is_operatore)
+@user_passes_test(has_portal_access)
 def clienti_attivi(request):
     clienti = Cliente.objects.filter(stato="active")
     return render(request, "crm/clienti_attivi.html", {"clienti": clienti})
 
 
 @login_required
-@user_passes_test(is_operatore)
+@user_passes_test(has_portal_access)
 def clienti_non_attivi(request):
     clienti = Cliente.objects.filter(stato="inactive")
     return render(request, "crm/clienti_non_attivi.html", {"clienti": clienti})
@@ -121,7 +135,7 @@ def clienti_non_attivi(request):
 
 # --- Aggiungi nuovo cliente ---
 @login_required
-@user_passes_test(is_operatore)
+@user_passes_test(has_portal_access)
 def cliente_nuovo(request):
     if request.method == "POST":
         form = ClienteForm(request.POST)
@@ -134,23 +148,22 @@ def cliente_nuovo(request):
 
 
 @login_required
-@user_passes_test(is_operatore)  # Solo operatori e admin
+@user_passes_test(has_portal_access)
 def clienti_possibili(request):
     clienti = Cliente.objects.filter(stato="possible")
-    # Se hai un template dedicato, puoi renderizzarlo:
-    # return render(request, "crm/clienti_possibili.html", {"clienti": clienti})
     return render(request, "crm/clienti_tutti.html", {"clienti": clienti, "page_obj": None})
 
 
 # --- Dettaglio Cliente ---
 @login_required
+@user_passes_test(has_portal_access)
 def clienti_dettaglio(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     docs_anag = cliente.documenti.filter(categoria="anagrafici").order_by("-caricato_il")
     docs_prat = cliente.documenti.filter(categoria="pratiche").order_by("-caricato_il")
     docs_leg = cliente.documenti.filter(categoria="legali").order_by("-caricato_il")
     pratiche = cliente.pratiche.all().order_by("-data_creazione")
-    note = cliente.note_entries.all().order_by("-creata_il")  # usa related_name note_entries
+    note = cliente.note_entries.all().order_by("-creata_il")  # related_name note_entries
     nota_form = NotaForm()
     return render(request, "crm/cliente_dettaglio.html", {
         "cliente": cliente,
@@ -164,6 +177,8 @@ def clienti_dettaglio(request, cliente_id):
 
 
 # --- Modifica Cliente ---
+@login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def cliente_modifica(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
@@ -203,6 +218,7 @@ def cliente_elimina(request, cliente_id):
 
 # --- Documenti ---
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def documento_nuovo(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
@@ -215,7 +231,6 @@ def documento_nuovo(request, cliente_id):
             messages.success(request, "Documento caricato correttamente.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
         else:
-            # log semplice lato server
             print("⚠️ DocumentoForm errors:", form.errors.as_data())
             messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
@@ -224,6 +239,7 @@ def documento_nuovo(request, cliente_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def documento_elimina(request, doc_id):
     doc = get_object_or_404(DocumentoCliente, id=doc_id)
@@ -235,6 +251,7 @@ def documento_elimina(request, doc_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 def documenti_zip_cliente(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     buffer = io.BytesIO()
@@ -246,7 +263,6 @@ def documenti_zip_cliente(request, cliente_id):
             try:
                 zf.writestr(arcname, d.file.read())
             except Exception:
-                # file non leggibile: ignora
                 pass
     buffer.seek(0)
     filename = f"documenti_cliente_{cliente.id}.zip"
@@ -257,6 +273,7 @@ def documenti_zip_cliente(request, cliente_id):
 
 # --- Pratiche ---
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def pratica_nuova(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
@@ -273,6 +290,7 @@ def pratica_nuova(request, cliente_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def pratica_modifica(request, pratica_id):
     pratica = get_object_or_404(Pratiche, id=pratica_id)
@@ -291,6 +309,7 @@ def pratica_modifica(request, pratica_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def pratica_elimina(request, pratica_id):
     pratica = get_object_or_404(Pratiche, id=pratica_id)
@@ -303,6 +322,7 @@ def pratica_elimina(request, pratica_id):
 
 # --- Note ---
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["POST"])
 def nota_crea(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
@@ -315,6 +335,7 @@ def nota_crea(request, cliente_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def nota_modifica(request, nota_id):
     nota = get_object_or_404(Nota, pk=nota_id)
@@ -335,6 +356,7 @@ def nota_modifica(request, nota_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def nota_elimina(request, nota_id):
     nota = get_object_or_404(Nota, pk=nota_id)
@@ -347,6 +369,7 @@ def nota_elimina(request, nota_id):
 
 # --- LEAD ---
 @login_required
+@user_passes_test(has_portal_access)
 def lead_lista(request):
     qs = Lead.objects.filter(is_archiviato=False).order_by("-creato_il")
 
@@ -415,6 +438,7 @@ def lead_lista(request):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def lead_nuovo(request):
     if request.method == "POST":
@@ -433,6 +457,7 @@ def lead_nuovo(request):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def lead_modifica(request, lead_id):
     lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
@@ -457,6 +482,7 @@ def _back(request):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_POST
 def lead_toggle_msg(request, lead_id):
     lead = get_object_or_404(Lead, pk=lead_id)
@@ -466,6 +492,7 @@ def lead_toggle_msg(request, lead_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_POST
 def lead_toggle_no_risposta(request, lead_id):
     lead = get_object_or_404(Lead, pk=lead_id)
@@ -479,6 +506,7 @@ def lead_toggle_no_risposta(request, lead_id):
 
 
 @login_required
+@user_passes_test(has_portal_access)
 @require_POST
 def lead_toggle_consulenza(request, lead_id):
     lead = get_object_or_404(Lead, pk=lead_id)
