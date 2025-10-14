@@ -1,119 +1,211 @@
 {% extends "crm/base.html" %}
-{% block content %}
-  <h2>Lead </h2>
-  
-  
-  <div class="card">
-      <p><a href="{% url 'lead_nuovo' %}">➕ Aggiungi Possibile Cliente</a></p>
-    
-      <form method="get" style="margin:10px 0; display:flex; gap:8px; flex-wrap:wrap;">
-          <input type="text" name="q" value="{{ q }}" placeholder="Cerca nome, email, telefono">
-          <select name="stato">
-              <option value="">Tutti gli stati</option>
-              <option value="in_corso"  {% if stato == "in_corso" %}selected{% endif %}>In corso</option>
-              <option value="negativo"  {% if stato == "negativo" %}selected{% endif %}>Esito negativo</option>
-              <option value="positivo"  {% if stato == "positivo" %}selected{% endif %}>Esito positivo</option>
-          </select>
-          <input type="date" name="dal" value="{{ dal }}">
-          <input type="date" name="al"  value="{{ al }}">
-          <button type="submit">Filtra</button>
-          <a href="{% url 'lead_lista' %}">Reset</a>
-      </form>
+{% load qparams %}
 
-      
-      <table border="1" cellpadding="6" cellspacing="0" class="table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th><a href="?sort=nome">Nome ▲</a> | <a href="?sort=-nome">▼</a></th>
-                <th><a href="?sort=cognome">Cognome ▲</a> | <a href="?sort=-cognome">▼</a></th>
-                <th>Telefono</th>
-                <th>Email</th>
-                <th><a href="?sort=stato">Stato ▲</a> | <a href="?sort=-stato">▼</a></th>
-                <th>Prossimo appuntamento</th>
-                {% if ha_negativi %}
-                <th>Azioni</th>
-                <th>Note operatori</th>
-                {% endif %}
-                <th><a href="?sort=creato_il">Creato il ▲</a> | <a href="?sort=-creato_il">▼</a></th>
-                <th>Gestione</th>
-            </tr>
-        </thead>
-    
-    
-          <tbody>
-              {% for l in leads %}
-              <tr>
-                  <td>{{ l.id }}</td>
-                  <td>{{ l.nome }}</td>
-                  <td>{{ l.cognome }}</td>
-                  <td>{{ l.telefono|default:"—" }}</td>
-                  <td>{{ l.email|default:"—" }}</td>
-                  <td>{{ l.get_stato_display }}</td>
-                  <td>
-                      {% if l.stato == "in_corso" %}
-                          {% if l.appuntamento_previsto %}
-                              {{ l.appuntamento_previsto|date:"d/m/Y H:i" }}
-                          {% else %}—{% endif %}
-                      {% else %}
-                          {{ l.motivazione_negativa|default:"—" }}
-                      {% endif %}
-                  </td>
-    
-                  <!-- Colonna con le checkbox -->
-                  <td>
-                      <!-- Consulenza effettuata
-                      <form method="post" action="{% url 'lead_toggle_consulenza' l.id %}" style="display:inline-block; margin-right:8px;">
-                          {% csrf_token %}
-                          <label style="cursor:pointer;">
-                              <input type="checkbox" onchange="this.form.submit()" {% if l.consulenza_effettuata %}checked{% endif %}>
-                              Consulenza effettuata
-                          </label>
-                      </form>
-    
-                      No risposta -->
-                      <!-- <form method="post" action="{% url 'lead_toggle_no_risposta' l.id %}" style="display:inline-block; margin-right:8px;">
-                          {% csrf_token %}
-                          <label style="cursor:pointer;">
-                              <input type="checkbox" onchange="this.form.submit()" {% if l.no_risposta %}checked{% endif %}>
-                              No risposta
-                          </label>
-                      </form> -->
-                     
-    
-                      <!-- Messaggio inviato: VISIBILE SOLO SE esito negativo -->
-                      {% if l.stato == "negativo" %}
-                      <form method="post" action="{% url 'lead_toggle_msg' l.id %}" style="display:inline-block;">
-                          {% csrf_token %}
-                          <label style="cursor:pointer;">
-                              <input type="checkbox" onchange="this.form.submit()" {% if l.messaggio_inviato %}checked{% endif %}>
-                              Messaggio inviato
-                          </label>
-                      </form>
-                      {% endif %}
-                  </td>
-    
-                  <td style="max-width:280px;">{{ l.note_operatori|default:"—" }}</td>
-                  <td>{{ l.creato_il|date:"d/m/Y H:i" }}</td>
-                  <td><a href="{% url 'lead_modifica' l.id %}">Modifica</a></td>
-              </tr>
-              {% empty %}
-              <tr><td colspan="11">Nessun lead presente.</td></tr>
-              {% endfor %}
-          </tbody>
-      </table>
+{% block title %}Tutti i lead · Debiti Stop{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-[min(1400px,100%)] space-y-5">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-xl font-extrabold">Tutti i lead</h1>
+    <a class="btn btn-primary" href="{% url 'lead_nuovo' %}">+ Nuovo lead</a>
   </div>
 
+  <!-- Filtri -->
+  <form method="get" class="card bg-base-100 shadow">
+    <div class="card-body gap-3">
+      <div class="grid gap-3 md:grid-cols-4">
+        <label class="form-control md:col-span-2">
+          <div class="label"><span class="label-text">Cerca (nome, email, telefono)</span></div>
+          <input type="text" name="q" value="{{ q }}" class="input input-bordered w-full" />
+        </label>
 
-  {% if page_obj.paginator.num_pages > 1 %}
-      <div style="margin-top:10px; display:flex; gap:6px;">
-          {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&stato={{ stato }}&dal={{ dal }}&al={{ al }}">« Prec</a>
-          {% endif %}
-          <span>Pagina {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-          {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&stato={{ stato }}&dal={{ dal }}&al={{ al }}">Succ »</a>
-          {% endif %}
+        <label class="form-control">
+          <div class="label"><span class="label-text">Stato</span></div>
+          <select name="stato" class="select select-bordered w-full">
+            <option value="">Tutti</option>
+            <option value="in_corso" {% if stato == 'in_corso' %}selected{% endif %}>In corso</option>
+            <option value="negativo" {% if stato == 'negativo' %}selected{% endif %}>Negativo</option>
+            <option value="positivo" {% if stato == 'positivo' %}selected{% endif %}>Positivo</option>
+          </select>
+        </label>
+
+        <div class="grid grid-cols-2 gap-3">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Creati dal</span></div>
+            <input type="date" name="dal" value="{{ dal }}" class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Creati al</span></div>
+            <input type="date" name="al" value="{{ al }}" class="input input-bordered w-full" />
+          </label>
+        </div>
       </div>
+
+      <!-- Quick filter appuntamenti -->
+        <div class="card bg-base-200/40">
+        <div class="card-body gap-2">
+            <div class="label"><span class="label-text font-semibold">Appuntamenti</span></div>
+            <div class="flex flex-wrap items-center gap-2">
+            <label class="btn btn-sm {% if not appt %}btn-active{% endif %}">
+                <input type="radio" name="appt" value="" class="hidden" {% if not appt %}checked{% endif %}>
+                Tutti
+            </label>
+            <label class="btn btn-sm {% if appt == 'today' %}btn-active{% endif %}">
+                <input type="radio" name="appt" value="today" class="hidden" {% if appt == 'today' %}checked{% endif %}>
+                Oggi
+            </label>
+            <label class="btn btn-sm {% if appt == 'tomorrow' %}btn-active{% endif %}">
+                <input type="radio" name="appt" value="tomorrow" class="hidden" {% if appt == 'tomorrow' %}checked{% endif %}>
+                Domani
+            </label>
+            <label class="btn btn-sm {% if appt == 'next3' %}btn-active{% endif %}">
+                <input type="radio" name="appt" value="next3" class="hidden" {% if appt == 'next3' %}checked{% endif %}>
+                Prossimi 3 giorni
+            </label>
+            <label class="btn btn-sm {% if appt == 'next7' %}btn-active{% endif %}">
+                <input type="radio" name="appt" value="next7" class="hidden" {% if appt == 'next7' %}checked{% endif %}>
+                Prossimi 7 giorni
+            </label>
+            {# RIMOSSA 'Settimana prossima' #}
+            </div>
+        </div>
+        </div>
+
+
+      <div class="flex items-center gap-2 justify-end">
+        <button type="submit" class="btn btn-primary">Filtra</button>
+        <a class="btn btn-ghost" href="{% url 'lead_lista' %}">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Tabella -->
+  <div class="table-shell">
+    <div class="table-scroll">
+      <table class="table table-zebra table-app">
+        <thead>
+          <tr>
+            <th class="th-min">#</th>
+            <th>
+              <a href="{% qurl sort='nome' page=None %}" class="link link-hover">Nome</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
+              <a href="{% qurl sort='cognome' page=None %}" class="link link-hover">Cognome</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>Email</th>
+            <th>Telefono</th>
+            <th>Provenienza</th>
+            <th>Consulente</th>
+            <th>
+                <a href="{% qurl sort='primo_contatto' page=None %}" class="link link-hover">Primo contatto</a>
+                <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
+              <a href="{% qurl sort='creato_il' page=None %}" class="link link-hover">Creato</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
+              <a href="{% qurl sort='appuntamento_previsto' page=None %}" class="link link-hover">
+                Appuntamento previsto il
+              </a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
+              <a href="{% qurl sort='richiamare_il' page=None %}" class="link link-hover">Richiamare il</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>Stato</th>
+            <th class="th-min td-actions">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in leads %}
+          <tr>
+            <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
+            <td class="td-nowrap">{{ l.nome }}</td>
+            <td class="td-nowrap">{{ l.cognome }}</td>
+            <td class="td-nowrap">{{ l.email|default:"—" }}</td>
+            <td class="td-nowrap">{{ l.telefono|default:"—" }}</td>
+            <td class="td-nowrap">{{ l.provenienza|default:"—" }}</td>
+            <td class="td-nowrap">{{ l.consulente|default:"—" }}</td>
+            <td class="td-nowrap">
+            {% if l.primo_contatto %}{{ l.primo_contatto|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+            </td>
+            <td class="td-nowrap">{{ l.creato_il|date:"d/m/Y H:i" }}</td>
+            <td class="td-nowrap">
+              {% if l.appuntamento_previsto %}
+                {{ l.appuntamento_previsto|date:"d/m/Y H:i" }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="td-nowrap">
+              {% if l.richiamare_il %}{{ l.richiamare_il|date:"d/m/Y" }}{% else %}—{% endif %}
+            </td>
+            <td class="td-nowrap">
+              {% if l.stato == 'positivo' %}
+                <span class="badge-attivo">Positivo</span>
+              {% elif l.stato == 'negativo' %}
+                <span class="badge-negativo">Negativo</span>
+              {% else %}
+                <span class="badge-in-corso">In corso</span>
+              {% endif %}
+            </td>
+            <td class="td-actions">
+              <div class="join">
+                <a href="{% url 'lead_modifica' l.pk %}" class="btn btn-ghost btn-sm join-item">Apri</a>
+                <form method="post" action="{% url 'lead_toggle_msg' l.pk %}" class="join-item">
+                  {% csrf_token %}
+                  <button class="btn btn-outline btn-sm" title="Messaggio inviato">
+                    {% if l.messaggio_inviato %}✅ Msg{% else %}Msg{% endif %}
+                  </button>
+                </form>
+                <form method="post" action="{% url 'lead_toggle_no_risposta' l.pk %}" class="join-item">
+                  {% csrf_token %}
+                  <button class="btn btn-outline btn-sm" title="Senza risposta">
+                    {% if l.no_risposta %}❗NR{% else %}NR{% endif %}
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="text-center text-base-content/60 py-6">Nessun lead trovato.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginazione -->
+    <div class="pager">
+      <div class="text-sm opacity-70">
+        Pagina {{ page_obj.number }} di {{ page_obj.paginator.num_pages }}
+      </div>
+      <div class="join">
+        <a class="btn join-item" href="{% qurl page=1 %}"                       {% if not page_obj.has_previous %}disabled{% endif %}>«</a>
+        <a class="btn join-item" href="{% if page_obj.has_previous %}{% qurl page=page_obj.previous_page_number %}{% endif %}" {% if not page_obj.has_previous %}disabled{% endif %}>Prec</a>
+        <a class="btn join-item" href="{% if page_obj.has_next %}{% qurl page=page_obj.next_page_number %}{% endif %}"         {% if not page_obj.has_next %}disabled{% endif %}>Succ</a>
+        <a class="btn join-item" href="{% qurl page=page_obj.paginator.num_pages %}" {% if not page_obj.has_next %}disabled{% endif %}>»</a>
+      </div>
+    </div>
+  </div>
+
+  {% if ha_negativi %}
+    <div class="alert alert-warning mt-2">
+      <span>Ci sono lead con esito <b>negativo</b> nei risultati.</span>
+    </div>
   {% endif %}
+
+</div>
+
+<!-- (opzionale) auto-submit per il gruppo appuntamenti -->
+<script>
+  document.querySelectorAll('input[name="appt"]').forEach(r => {
+    r.addEventListener('change', () => r.form && r.form.submit());
+  });
+</script>
 {% endblock %}

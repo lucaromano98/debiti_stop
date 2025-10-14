@@ -1,0 +1,110 @@
+@import "tailwindcss";
+@plugin "daisyui";
+@custom-variant dark (&:where(.dark, .dark *, [data-theme=dark], [data-theme=dark] *));
+@plugin "@tailwindcss/forms";
+
+/* fai scansionare i template Django */
+@source "../../templates/**/*.html";
+@source "../../**/*.py";
+
+
+/* Token brand facoltativi */
+@theme {
+  --color-brand-blue:   #1f2b7a;  /* blu notte */
+  --color-brand-orange: #ff7a1a;  /* arancione tramonto */
+  --color-brand-sky:    #3b82f6;  /* accento */
+}
+
+/* Utility di esempio (facoltativa) */
+.btn-primary {
+  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold
+         text-white bg-[--color-brand-orange] hover:brightness-110;
+}
+
+@layer base {
+  /* Label e feedback */
+  label { @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5; }
+  .help-text { @apply text-xs text-slate-500 dark:text-slate-400 mt-1; }
+  .error-text { @apply text-sm text-red-600 dark:text-red-400 mt-1; }
+
+  /* Campi (input/select/textarea) */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="password"],
+  select, textarea {
+    @apply w-full rounded-xl border border-slate-300/60 bg-white/90
+           px-3 py-2 text-slate-900 shadow-sm outline-none
+           focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/40
+           dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-100
+           dark:focus:ring-indigo-400/40 dark:focus:border-indigo-400/30;
+  }
+  textarea { @apply min-h-28; }
+
+  /* Card del form */
+  .form-card {
+    @apply rounded-2xl bg-white/60 p-6 backdrop-blur
+           ring-1 ring-slate-200/60 shadow-xl
+           dark:bg-slate-900/50 dark:ring-white/10;
+  }
+
+  /* Bottoni */
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-semibold transition; }
+  .btn-primary {
+    @apply btn bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700 shadow;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-700 hover:bg-slate-100
+           dark:text-slate-200 dark:hover:bg-slate-800;
+  }
+}
+
+@layer components {
+  /* Contenitore */
+  .table-shell {
+    @apply rounded-2xl bg-base-100 shadow-xl ring-1 ring-base-300/60
+           dark:ring-base-200/10 overflow-hidden;
+  }
+  .table-scroll { @apply overflow-x-auto; }
+
+  /* NON usiamo @apply su classi DaisyUI.
+     Mettiamo solo utilità Tailwind qui, e le classi DaisyUI le aggiungiamo nell’HTML. */
+  .table-app { @apply w-full align-middle; }
+
+  /* Header sticky + stile */
+  .table-app thead th {
+    @apply sticky top-0 z-10 bg-base-200 text-base font-semibold;
+  }
+
+  .table-app tbody tr { @apply hover:bg-base-200/50; }
+
+  .td-nowrap { @apply whitespace-nowrap; }
+  .td-actions { @apply text-right; }
+  .th-min     { @apply w-px; }
+
+  .badge-attivo   { @apply badge badge-success badge-outline; }
+  .badge-negativo { @apply badge badge-error  badge-outline; }
+  .badge-in-corso { @apply badge badge-info   badge-outline; }
+
+  .pager {
+    @apply flex items-center justify-between gap-3 p-3 border-t border-base-300/60
+           dark:border-base-200/10;
+  }
+  .pager .btn { @apply btn btn-sm; }
+  .pager .btn[disabled] { @apply btn-disabled; }
+
+  th .sort-raw { @apply sr-only; }
+}
+
+
+@layer base {
+  /* NESSUN background in dashboard */
+  body.dashboard,
+  body.dashboard .content {
+    background-image: none !important;
+    background-size: auto !important;
+    background-repeat: no-repeat !important;
+  }
+}

@@ -6,104 +6,275 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}Debiti Stop{% endblock %}</title>
 
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v={% now 'U' %}">
+  <!-- Imposta SUBITO il tema per evitare flash -->
+  <script>
+    (function () {
+      const KEY = 'theme';
+      try {
+        let t = localStorage.getItem(KEY);
+        if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark', t === 'dark');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- SOLO Tailwind compilato -->
+  <link href="{% static 'css/app.css' %}?v={% now 'U' %}" rel="stylesheet" />
+
+  <!-- Nascondi sidebar nelle pagine auth (login, reset, ecc.) -->
+  <style>
+    body.auth aside.sidebar{display:none!important;}
+    body.auth .content{grid-column:1 / -1;}
+  </style>
+
   {% block extra_css %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}">
-  <div class="layout">
 
-    <!-- Sidebar SEMPRE renderizzata; nascosta in login via CSS (body.auth ...) -->
-    <aside class="sidebar">
-      <div class="sb-top">
-        <div class="brand">
-          <span class="logo">DS</span>
-          <span class="brand-text label">Debiti Stop</span>
+<body class="min-h-screen antialiased
+             bg-slate-50 text-slate-900
+             dark:bg-[#0b1220] dark:text-slate-100
+             {% block body_class %}{% endblock %}">
+
+  <!-- Toggle tema: inline onclick a prova di tutto -->
+  <button
+    type="button"
+    data-theme-toggle
+    class="fixed right-4 top-4 z-[9999] inline-flex items-center gap-1 rounded-full border px-3 py-1.5
+           border-slate-300/60 bg-white/90 text-slate-800 shadow-sm backdrop-blur
+           hover:bg-white dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100"
+    aria-label="Cambia tema" title="Cambia tema"
+    onclick="(function(){var r=document.documentElement;var n=r.classList.contains('dark')?'light':'dark';r.classList.toggle('dark',n==='dark');r.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){}})()">
+    <span class="dark:hidden">🌙</span>
+    <span class="hidden dark:inline">☀️</span>
+  </button>
+
+  <!-- Layout: sidebar + contenuto -->
+  <div id="layout-root" class="grid min-h-screen grid-cols-[260px_minmax(0,1fr)]">
+
+    
+    <!-- Sidebar -->
+      <aside
+        class="sidebar group/sidebar sticky top-0 h-svh overflow-y-auto border-r
+              border-slate-200/60 bg-white/70 backdrop-blur-sm
+              dark:border-white/10 dark:bg-slate-900/60
+              w-[260px] transition-[width] duration-200
+              data-[collapsed=true]:w-[72px]"
+        data-collapsed="false"
+      >
+        <!-- Header logo + toggle -->
+        <div class="flex items-center justify-between gap-2 p-4">
+          <div class="flex items-center gap-2">
+            <span class="grid h-9 w-9 place-items-center rounded-lg
+                        bg-gradient-to-br from-blue-500 to-cyan-500 font-extrabold text-white">
+              DS
+            </span>
+            <span class="logo-text text-base font-semibold
+                        group-data-[collapsed=true]/sidebar:hidden">
+              Debiti Stop
+            </span>
+          </div>
+
+          <button type="button" data-toggle-sidebar
+            class="collapse-btn rounded-md border border-slate-300/60 p-1.5 text-slate-600 hover:bg-white
+                  dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-800
+                  transition-transform duration-200"
+            aria-label="Comprimi/espandi menu" title="Comprimi/espandi">
+            <svg class="collapse-icon h-[18px] w-[18px] opacity-80
+                        group-data-[collapsed=true]/sidebar:rotate-180 transition-transform duration-200"
+                viewBox="0 0 24 24" fill="none">
+              <path fill="currentColor" d="M15.41 7.41L14 6l-6 6l6 6l1.41-1.41L10.83 12z"/>
+            </svg>
+          </button>
         </div>
 
-        <button class="sb-toggle" data-toggle-sidebar aria-label="Comprimi/espandi menu" title="Comprimi/espandi">
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M15.41 7.41L14 6l-6 6l6 6l1.41-1.41L10.83 12z"/>
-          </svg>
-        </button>
-      </div>
+        <!-- Blocco utente -->
+        <div class="mx-4 mb-3 rounded-xl border border-slate-200/60 bg-white/70 p-3 text-sm
+                    dark:border-white/10 dark:bg-slate-800/60">
+          <div class="flex items-center gap-2">
+            <span aria-hidden="true">👤</span>
+            <span class="truncate group-data-[collapsed=true]/sidebar:hidden">
+              {{ request.user.username }}
+              {% if request.user.profiloutente and request.user.profiloutente.ruolo %}
+                <span class="text-slate-500 dark:text-slate-400">
+                  ({{ request.user.profiloutente.ruolo|title }})
+                </span>
+              {% endif %}
+            </span>
+          </div>
+        </div>
 
-      <div class="user-info">
-        <span class="icon" aria-hidden="true">👤</span>
-        <span class="label">
-          {{ request.user.username }}
-          {% if request.user.profiloutente and request.user.profiloutente.ruolo %}
-            <span class="role">({{ request.user.profiloutente.ruolo|title }})</span>
-          {% endif %}
-        </span>
-      </div>
+        <!-- Nav -->
+        <nav class="relative mx-2 flex flex-col gap-1 pb-4">
+          {% comment %} Helper per il link attivo {% endcomment %}
+          {% with curr=request.resolver_match.url_name %}
 
-      <nav class="menu">
-        <a href="{% url 'cliente_nuovo' %}"
-           class="menu-link {% if request.resolver_match and request.resolver_match.url_name == 'cliente_nuovo' %}is-active{% endif %}"
-           data-label="Aggiungi Cliente">
-          <span class="icon" aria-hidden="true">✚</span><span class="label">Aggiungi Cliente</span>
-        </a>
+          <!-- Aggiungi Cliente -->
+          <a href="{% url 'cliente_nuovo' %}"
+            aria-current="{% if curr == 'cliente_nuovo' %}page{% endif %}"
+            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                    text-slate-700 hover:bg-slate-100
+                    dark:text-slate-200 dark:hover:bg-slate-800
+                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                    before:h-6 before:w-[3px] before:rounded-r
+                    before:opacity-0 aria-[current=page]:before:opacity-100
+                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+            <span class="shrink-0">✚</span>
+            <span class="item-label truncate
+                        group-data-[collapsed=true]/sidebar:hidden">Aggiungi Cliente</span>
 
-        <a href="{% url 'lead_nuovo' %}"
-           class="menu-link {% if request.resolver_match and request.resolver_match.url_name == 'lead_nuovo' %}is-active{% endif %}"
-           data-label="Possibile Cliente">
-          <span class="icon" aria-hidden="true">✚</span><span class="label">Possibile Cliente</span>
-        </a>
+            <!-- Tooltip quando collassata -->
+            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                        opacity-0 shadow-lg ring-1 ring-black/10
+                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                        group-hover/nav:opacity-100
+                        group-data-[collapsed=false]/sidebar:hidden">
+              Aggiungi Cliente
+            </span>
+          </a>
 
-        <a href="{% url 'clienti_tutti' %}"
-           class="menu-link {% if request.resolver_match and request.resolver_match.url_name == 'clienti_tutti' %}is-active{% endif %}"
-           data-label="Tutti i Clienti">
-          <span class="icon" aria-hidden="true">👥</span><span class="label">Tutti i Clienti</span>
-        </a>
+          <!-- Possibile Cliente -->
+          <a href="{% url 'lead_nuovo' %}"
+            aria-current="{% if curr == 'lead_nuovo' %}page{% endif %}"
+            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                    text-slate-700 hover:bg-slate-100
+                    dark:text-slate-200 dark:hover:bg-slate-800
+                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                    before:h-6 before:w-[3px] before:rounded-r
+                    before:opacity-0 aria-[current=page]:before:opacity-100
+                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+            <span class="shrink-0">✚</span>
+            <span class="item-label truncate
+                        group-data-[collapsed=true]/sidebar:hidden">Possibile Cliente</span>
+            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                        opacity-0 shadow-lg ring-1 ring-black/10
+                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                        group-hover/nav:opacity-100
+                        group-data-[collapsed=false]/sidebar:hidden">
+              Possibile Cliente
+            </span>
+          </a>
 
-        <a href="{% url 'lead_lista' %}"
-           class="menu-link {% if request.resolver_match and request.resolver_match.url_name == 'lead_lista' %}is-active{% endif %}"
-           data-label="Possibili clienti">
-          <span class="icon" aria-hidden="true">📋</span><span class="label">Possibili clienti</span>
-        </a>
+          <!-- Tutti i Clienti -->
+          <a href="{% url 'clienti_tutti' %}"
+            aria-current="{% if curr == 'clienti_tutti' %}page{% endif %}"
+            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                    text-slate-700 hover:bg-slate-100
+                    dark:text-slate-200 dark:hover:bg-slate-800
+                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                    before:h-6 before:w-[3px] before:rounded-r
+                    before:opacity-0 aria-[current=page]:before:opacity-100
+                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+            <span class="shrink-0">👥</span>
+            <span class="item-label truncate
+                        group-data-[collapsed=true]/sidebar:hidden">Tutti i Clienti</span>
+            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                        opacity-0 shadow-lg ring-1 ring-black/10
+                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                        group-hover/nav:opacity-100
+                        group-data-[collapsed=false]/sidebar:hidden">
+              Tutti i Clienti
+            </span>
+          </a>
 
-        <div class="sb-footer">
-          <form method="POST" action="{% url 'logout' %}" class="logout-form">
+          <!-- Possibili Clienti -->
+          <a href="{% url 'lead_lista' %}"
+            aria-current="{% if curr == 'lead_lista' %}page{% endif %}"
+            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                    text-slate-700 hover:bg-slate-100
+                    dark:text-slate-200 dark:hover:bg-slate-800
+                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                    before:h-6 before:w-[3px] before:rounded-r
+                    before:opacity-0 aria-[current=page]:before:opacity-100
+                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+            <span class="shrink-0">📋</span>
+            <span class="item-label truncate
+                        group-data-[collapsed=true]/sidebar:hidden">Possibili clienti</span>
+            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                        opacity-0 shadow-lg ring-1 ring-black/10
+                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                        group-hover/nav:opacity-100
+                        group-data-[collapsed=false]/sidebar:hidden">
+              Possibili clienti
+            </span>
+          </a>
+
+          <!-- Divider -->
+          <div class="mt-3 border-t border-slate-200/60 dark:border-white/10"></div>
+
+          <!-- Logout -->
+          <form method="POST" action="{% url 'logout' %}" class="mx-2">
             {% csrf_token %}
-            <button type="submit" class="logout-btn">
-              <span class="icon" aria-hidden="true">🔒</span><span class="label">Logout</span>
+            <button type="submit"
+              class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300/60
+                    bg-white/80 px-3 py-2 text-slate-800 shadow-sm hover:bg-white
+                    dark:border-white/10 dark:bg-slate-800/70 dark:text-slate-100 dark:hover:bg-slate-800">
+              <span aria-hidden="true">🔒</span>
+              <span class="group-data-[collapsed=true]/sidebar:hidden">Logout</span>
             </button>
           </form>
-        </div>
-      </nav>
-    </aside>
 
-    <!-- Content -->
-    <div class="content">
+          {% endwith %}
+        </nav>
+      </aside>
+
+
+    <!-- Contenuto -->
+    <main class="content p-6">
       {% if messages %}
-        <div class="messages">
+        <div class="mb-4 space-y-2">
           {% for message in messages %}
-            <div class="msg msg-{{ message.tags|default:'info' }}">{{ message }}</div>
+            {% if 'success' in message.tags %}
+              <div class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-green-800
+                          dark:border-green-700 dark:bg-green-900/30 dark:text-green-200">{{ message }}</div>
+            {% elif 'error' in message.tags or 'danger' in message.tags %}
+              <div class="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-red-800
+                          dark:border-red-700 dark:bg-red-900/30 dark:text-red-200">{{ message }}</div>
+            {% elif 'warning' in message.tags %}
+              <div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-800
+                          dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">{{ message }}</div>
+            {% else %}
+              <div class="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-blue-800
+                          dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-200">{{ message }}</div>
+            {% endif %}
           {% endfor %}
         </div>
       {% endif %}
 
       {% block content %}{% endblock %}
-    </div>
+    </main>
   </div>
 
   {% block extra_js %}{% endblock %}
 
-  <!-- Mini-JS: toggle/persist sidebar -->
+  <!-- Persistenza sidebar (opzionale) -->
   <script>
-  (function(){
-    const KEY = 'sidebar-collapsed';
-    const saved = localStorage.getItem(KEY) === '1';
-    document.body.classList.toggle('sidebar-collapsed', saved);
+    (function () {
+      const KEY = 'sidebar-collapsed';
+      const aside = document.querySelector('aside.sidebar');
+      if (!aside) return;
 
-    document.addEventListener('click', function(e){
-      const btn = e.target.closest('[data-toggle-sidebar]');
-      if(!btn) return;
-      e.preventDefault();
-      const collapsed = document.body.classList.toggle('sidebar-collapsed');
-      localStorage.setItem(KEY, collapsed ? '1' : '0');
-    });
-  })();
+      // stato iniziale
+      const saved = localStorage.getItem(KEY) === '1';
+      if (saved) aside.setAttribute('data-collapsed', 'true');
+
+      document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-toggle-sidebar]');
+        if (!btn) return;
+        const isCollapsed = aside.getAttribute('data-collapsed') === 'true';
+        aside.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+        try { localStorage.setItem(KEY, !isCollapsed ? '1' : '0'); } catch {}
+      });
+    })();
   </script>
+
 </body>
 </html>

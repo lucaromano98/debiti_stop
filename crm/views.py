@@ -1,48 +1,104 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.urls import reverse
-from django.contrib.auth.views import LoginView
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.views.decorators.http import require_http_methods, require_POST
-from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
-from django.contrib import messages
-
-from django.core.paginator import Paginator
-from django.db.models import Q
-
+from __future__ import annotations
+from datetime import datetime, date, timedelta
 import io, os, zipfile
 
-from .models import Cliente, DocumentoCliente, Pratiche, Nota
-from .forms import ClienteForm, DocumentoForm, PraticaForm, NotaForm, LeadForm, Lead
-from .services import converti_lead_in_cliente
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.views import LoginView
+from django.core.paginator import Paginator
+from django.db.models import Q, Exists, OuterRef
+from django.http import HttpResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_http_methods, require_POST
+
+from .forms import (
+    ClienteForm,
+    DocumentoForm,
+    PraticaForm,
+    NotaForm,
+    LeadForm,
+)
+from .models import (
+    Cliente,
+    DocumentoCliente,   # rel: documento.cliente -> Cliente
+    Pratiche,           # rel: pratica.cliente -> Cliente
+    Nota,
+    Lead,
+)
+# from django_tables2 import RequestConfig
+# from .tables import ClientiTable
 
 
-# --- Login ---
+# ==============================
+# Helpers comuni
+# ==============================
+def _parse_date(s: str | None):
+    if not s:
+        return None
+    s = s.strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            pass
+    return None
+
+
+def _get_per_page(request, default=20, cap=100):
+    try:
+        per = int(request.GET.get("per", default))
+        return max(1, min(per, cap))
+    except (TypeError, ValueError):
+        return default
+
+
+def _back(request, fallback_name="lead_lista"):
+    return request.META.get("HTTP_REFERER") or reverse(fallback_name)
+
+
+# Quick ranges per appuntamenti
+def _appt_range(key: str, base: date | None = None):
+    """Ritorna (start_date, end_date) inclusivi per filtro appuntamenti su 'appuntamento_previsto'."""
+    d = base or date.today()
+    if key == "today":
+        return d, d
+    if key == "tomorrow":
+        t = d + timedelta(days=1)
+        return t, t
+    if key == "next3":
+        # esclude OGGI → domani fino a tra 3 giorni
+        start = d + timedelta(days=1)
+        end = d + timedelta(days=3)
+        return start, end
+    if key == "next7":
+        # include oggi → da oggi ai prossimi 7 giorni
+        return d, d + timedelta(days=7)
+    return None, None
+
+
+# ==============================
+# Permessi / Accesso
+# ==============================
 class CustomLoginView(LoginView):
-    template_name = 'crm/login.html'
+    template_name = "crm/login.html"
 
 
 def home_redirect(request):
-    return redirect('login')
+    return redirect("login")
 
 
 @login_required
 def dashboard(request):
-    return render(request, 'crm/dashboard.html')
+    return render(request, "crm/dashboard.html")
 
 
-# --- Ruoli / permessi helper ---
 def is_operatore(user):
-    """Compat: usato solo se davvero ti serve distinguere operatori/legali."""
     prof = getattr(user, "profiloutente", None)
-    return user.is_authenticated and (prof and prof.ruolo in ["operatore", "legale"])
+    return user.is_authenticated and bool(prof and prof.ruolo in ["operatore", "legale"])
 
 
 def has_portal_access(user):
-    """
-    Accesso pieno al portale per:
-      - superuser SEMPRE (anche senza ProfiloUtente)
-      - profilo con ruolo in {"admin","operatore","legale"}
-    """
     if not user.is_authenticated:
         return False
     if user.is_superuser:
@@ -52,7 +108,6 @@ def has_portal_access(user):
 
 
 def is_admin(user):
-    """Admin vero se superuser oppure profilo.ruolo == 'admin'."""
     if not user.is_authenticated:
         return False
     if user.is_superuser:
@@ -61,53 +116,79 @@ def is_admin(user):
     return bool(prof and prof.ruolo == "admin")
 
 
-# --- Clienti ---
+# ==============================
+# Clienti – lista/filtri
+# ==============================
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_tutti(request):
-    qs = Cliente.objects.all().order_by("-data_creazione")
+    qs = (
+        Cliente.objects.all()
+        .select_related()
+        .prefetch_related("documenti", "pratiche")
+    )
 
     # --- FILTRI ---
     q = request.GET.get("q", "").strip()
-    stato = request.GET.get("stato", "").strip()  # active/inactive/legal
-    dal = request.GET.get("dal", "").strip()
-    al = request.GET.get("al", "").strip()
-    has_docs = request.GET.get("has_docs", "").strip()   # "si"
-    has_prat = request.GET.get("has_prat", "").strip()   # "si"
+    stato = request.GET.get("stato", "").strip()           # active/inactive/legal
+    dal_raw = request.GET.get("dal", "").strip()
+    al_raw = request.GET.get("al", "").strip()
+    has_docs = request.GET.get("has_docs", "").strip()     # "si"
+    has_prat = request.GET.get("has_prat", "").strip()     # "si"
 
     if q:
         qs = qs.filter(
-            Q(nome__icontains=q) |
-            Q(cognome__icontains=q) |
-            Q(email__icontains=q) |
-            Q(telefono__icontains=q)
+            Q(nome__icontains=q)
+            | Q(cognome__icontains=q)
+            | Q(email__icontains=q)
+            | Q(telefono__icontains=q)
         )
+
     if stato in {"active", "inactive", "legal"}:
         qs = qs.filter(stato=stato)
+
+    dal = _parse_date(dal_raw)
+    al = _parse_date(al_raw)
     if dal:
         qs = qs.filter(data_creazione__date__gte=dal)
     if al:
         qs = qs.filter(data_creazione__date__lte=al)
-    if has_docs == "si":
-        qs = qs.filter(documenti__isnull=False).distinct()
-    if has_prat == "si":
-        qs = qs.filter(pratiche__isnull=False).distinct()
 
-    # --- SORT opzionale ---
-    sort = request.GET.get("sort", "")
-    allowed = {"nome", "-nome", "cognome", "-cognome", "data_creazione", "-data_creazione"}
-    if sort in allowed:
-        qs = qs.order_by(sort)
+    if has_docs == "si":
+        sub_docs = DocumentoCliente.objects.filter(cliente=OuterRef("pk"))
+        qs = qs.annotate(_has_docs=Exists(sub_docs)).filter(_has_docs=True)
+
+    if has_prat == "si":
+        sub_prat = Pratiche.objects.filter(cliente=OuterRef("pk"))
+        qs = qs.annotate(_has_prat=Exists(sub_prat)).filter(_has_prat=True)
+
+    # --- SORT ---
+    sort = request.GET.get("sort", "").strip()
+    allowed = {
+        "nome", "-nome",
+        "cognome", "-cognome",
+        "data_creazione", "-data_creazione",
+    }
+    if sort not in allowed:
+        sort = "-data_creazione"
+    qs = qs.order_by(sort)
 
     # --- PAGINAZIONE ---
-    paginator = Paginator(qs, 20)
+    per_page = _get_per_page(request, 20, 100)
+    paginator = Paginator(qs, per_page)
     page_obj = paginator.get_page(request.GET.get("page"))
 
     ctx = {
         "clienti": page_obj.object_list,
         "page_obj": page_obj,
-        "q": q, "stato": stato, "dal": dal, "al": al,
-        "has_docs": has_docs, "has_prat": has_prat,
+        "q": q,
+        "stato": stato,
+        "dal": dal_raw,
+        "al": al_raw,
+        "has_docs": has_docs,
+        "has_prat": has_prat,
+        "sort": sort,
+        "per": per_page,
     }
     return render(request, "crm/clienti_tutti.html", ctx)
 
@@ -115,33 +196,37 @@ def clienti_tutti(request):
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_legali(request):
-    clienti = Cliente.objects.filter(stato="legal")
+    clienti = Cliente.objects.filter(stato="legal").order_by("-data_creazione")
     return render(request, "crm/clienti_legali.html", {"clienti": clienti})
 
 
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_attivi(request):
-    clienti = Cliente.objects.filter(stato="active")
+    clienti = Cliente.objects.filter(stato="active").order_by("-data_creazione")
     return render(request, "crm/clienti_attivi.html", {"clienti": clienti})
 
 
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_non_attivi(request):
-    clienti = Cliente.objects.filter(stato="inactive")
+    clienti = Cliente.objects.filter(stato="inactive").order_by("-data_creazione")
     return render(request, "crm/clienti_non_attivi.html", {"clienti": clienti})
 
 
-# --- Aggiungi nuovo cliente ---
+# ==============================
+# Clienti – CRUD
+# ==============================
 @login_required
 @user_passes_test(has_portal_access)
 def cliente_nuovo(request):
     if request.method == "POST":
         form = ClienteForm(request.POST)
         if form.is_valid():
-            form.save()
+            cliente = form.save()
+            messages.success(request, f"Cliente creato: {cliente.nome} {cliente.cognome}.")
             return redirect("clienti_tutti")
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = ClienteForm()
     return render(request, "crm/cliente_form.html", {"form": form})
@@ -150,11 +235,10 @@ def cliente_nuovo(request):
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_possibili(request):
-    clienti = Cliente.objects.filter(stato="possible")
+    clienti = Cliente.objects.filter(stato="possible").order_by("-data_creazione")
     return render(request, "crm/clienti_tutti.html", {"clienti": clienti, "page_obj": None})
 
 
-# --- Dettaglio Cliente ---
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_dettaglio(request, cliente_id):
@@ -163,60 +247,57 @@ def clienti_dettaglio(request, cliente_id):
     docs_prat = cliente.documenti.filter(categoria="pratiche").order_by("-caricato_il")
     docs_leg = cliente.documenti.filter(categoria="legali").order_by("-caricato_il")
     pratiche = cliente.pratiche.all().order_by("-data_creazione")
-    note = cliente.note_entries.all().order_by("-creata_il")  # related_name note_entries
+    note = cliente.note_entries.all().order_by("-creata_il")  # related_name="note_entries"
     nota_form = NotaForm()
-    return render(request, "crm/cliente_dettaglio.html", {
-        "cliente": cliente,
-        "docs_anag": docs_anag,
-        "docs_prat": docs_prat,
-        "docs_leg": docs_leg,
-        "pratiche": pratiche,
-        "note": note,
-        "nota_form": nota_form,
-    })
+    return render(
+        request,
+        "crm/cliente_dettaglio.html",
+        {
+            "cliente": cliente,
+            "docs_anag": docs_anag,
+            "docs_prat": docs_prat,
+            "docs_leg": docs_leg,
+            "pratiche": pratiche,
+            "note": note,
+            "nota_form": nota_form,
+        },
+    )
 
 
-# --- Modifica Cliente ---
 @login_required
 @user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def cliente_modifica(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
-
     if request.method == "POST":
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             form.save()
+            messages.success(request, "Cliente aggiornato.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = ClienteForm(instance=cliente)
-
-    return render(request, "crm/cliente_form.html", {
-        "form": form,
-        "is_edit": True,
-        "cliente": cliente,
-    })
+    return render(request, "crm/cliente_form.html", {"form": form, "is_edit": True, "cliente": cliente})
 
 
-# --- Elimina Cliente (GET=conferma, POST=elimina) ---
 @login_required
 @user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def cliente_elimina(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
-
     if request.method == "POST":
         if not is_admin(request.user):
             return HttpResponseForbidden("Solo gli admin possono eliminare clienti.")
         cliente.delete()
         messages.success(request, "Cliente eliminato con successo.")
         return redirect("clienti_tutti")
-
-    # GET → pagina di conferma
     return render(request, "crm/cliente_elimina.html", {"cliente": cliente})
 
 
-# --- Documenti ---
+# ==============================
+# Documenti
+# ==============================
 @login_required
 @user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
@@ -230,9 +311,7 @@ def documento_nuovo(request, cliente_id):
             doc.save()
             messages.success(request, "Documento caricato correttamente.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
-        else:
-            print("⚠️ DocumentoForm errors:", form.errors.as_data())
-            messages.error(request, "Controlla i campi: ci sono errori nel form.")
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = DocumentoForm()
     return render(request, "crm/documento_form.html", {"form": form, "cliente": cliente})
@@ -246,6 +325,7 @@ def documento_elimina(request, doc_id):
     cliente_id = doc.cliente.id
     if request.method == "POST":
         doc.delete()
+        messages.success(request, "Documento eliminato.")
         return redirect("cliente_dettaglio", cliente_id=cliente_id)
     return render(request, "crm/documento_conferma_elimina.html", {"doc": doc})
 
@@ -257,7 +337,7 @@ def documenti_zip_cliente(request, cliente_id):
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         for d in cliente.documenti.all():
-            if not d.file:
+            if not getattr(d, "file", None):
                 continue
             arcname = f"{d.categoria}/{os.path.basename(d.file.name)}"
             try:
@@ -271,7 +351,9 @@ def documenti_zip_cliente(request, cliente_id):
     return resp
 
 
-# --- Pratiche ---
+# ==============================
+# Pratiche
+# ==============================
 @login_required
 @user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
@@ -283,7 +365,9 @@ def pratica_nuova(request, cliente_id):
             p = form.save(commit=False)
             p.cliente = cliente
             p.save()
+            messages.success(request, "Pratica creata.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = PraticaForm()
     return render(request, "crm/pratica_form.html", {"form": form, "cliente": cliente})
@@ -298,7 +382,9 @@ def pratica_modifica(request, pratica_id):
         form = PraticaForm(request.POST, instance=pratica)
         if form.is_valid():
             form.save()
+            messages.success(request, "Pratica aggiornata.")
             return redirect("cliente_dettaglio", cliente_id=pratica.cliente.id)
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = PraticaForm(instance=pratica)
     return render(
@@ -316,14 +402,17 @@ def pratica_elimina(request, pratica_id):
     cliente_id = pratica.cliente.id
     if request.method == "POST":
         pratica.delete()
+        messages.success(request, "Pratica eliminata.")
         return redirect("cliente_dettaglio", cliente_id=cliente_id)
     return render(request, "crm/pratica_conferma_elimina.html", {"pratica": pratica})
 
 
-# --- Note ---
+# ==============================
+# Note
+# ==============================
 @login_required
 @user_passes_test(has_portal_access)
-@require_http_methods(["POST"])
+@require_POST
 def nota_crea(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     form = NotaForm(request.POST)
@@ -331,6 +420,9 @@ def nota_crea(request, cliente_id):
         nota = form.save(commit=False)
         nota.cliente = cliente
         nota.save()
+        messages.success(request, "Nota aggiunta.")
+    else:
+        messages.error(request, "Impossibile salvare la nota.")
     return redirect("cliente_dettaglio", cliente_id=cliente.id)
 
 
@@ -344,15 +436,12 @@ def nota_modifica(request, nota_id):
         form = NotaForm(request.POST, instance=nota)
         if form.is_valid():
             form.save()
+            messages.success(request, "Nota aggiornata.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = NotaForm(instance=nota)
-    return render(request, "crm/nota_form.html", {
-        "form": form,
-        "cliente": cliente,
-        "nota": nota,
-        "is_edit": True,
-    })
+    return render(request, "crm/nota_form.html", {"form": form, "cliente": cliente, "nota": nota, "is_edit": True})
 
 
 @login_required
@@ -363,35 +452,45 @@ def nota_elimina(request, nota_id):
     cliente_id = nota.cliente.id
     if request.method == "POST":
         nota.delete()
+        messages.success(request, "Nota eliminata.")
         return redirect("cliente_dettaglio", cliente_id=cliente_id)
     return render(request, "crm/nota_conferma_elimina.html", {"nota": nota})
 
 
-# --- LEAD ---
+# ==============================
+# Lead – lista/filtri/CRUD
+# ==============================
 @login_required
 @user_passes_test(has_portal_access)
 def lead_lista(request):
-    qs = Lead.objects.filter(is_archiviato=False).order_by("-creato_il")
+    qs = Lead.objects.filter(is_archiviato=False)
 
-    # Filtri
     q = request.GET.get("q", "").strip()
-    stato = request.GET.get("stato", "").strip()
-    dal = request.GET.get("dal", "").strip()
-    al = request.GET.get("al", "").strip()
+    stato = request.GET.get("stato", "").strip()  # in_corso/negativo/positivo
+    dal_raw = request.GET.get("dal", "").strip()
+    al_raw = request.GET.get("al", "").strip()
 
-    # Nuovi filtri
     only_no_risposta = request.GET.get("no_risposta", "") == "1"
     only_msg_inviato = request.GET.get("msg_inviato", "") == "1"
     only_acquisizione = request.GET.get("in_acquisizione", "") == "1"
-    da_richiamare_da = request.GET.get("richiamo_da", "").strip()
-    da_richiamare_a = request.GET.get("richiamo_a", "").strip()
+
+    # QUICK FILTER: appuntamenti su 'appuntamento_previsto'
+    appt = request.GET.get("appt", "").strip()
+    start, end = _appt_range(appt)
+    if start and end:
+        qs = qs.filter(appuntamento_previsto__date__gte=start,
+                       appuntamento_previsto__date__lte=end)
+
+    # Filtri liberi su creato_il (li tengo: possono servire)
+    dal = _parse_date(dal_raw)
+    al = _parse_date(al_raw)
 
     if q:
         qs = qs.filter(
-            Q(nome__icontains=q) |
-            Q(cognome__icontains=q) |
-            Q(email__icontains=q) |
-            Q(telefono__icontains=q)
+            Q(nome__icontains=q)
+            | Q(cognome__icontains=q)
+            | Q(email__icontains=q)
+            | Q(telefono__icontains=q)
         )
     if stato in {"in_corso", "negativo", "positivo"}:
         qs = qs.filter(stato=stato)
@@ -406,35 +505,47 @@ def lead_lista(request):
         qs = qs.filter(messaggio_inviato=True)
     if only_acquisizione:
         qs = qs.filter(in_acquisizione=True)
-    if da_richiamare_da:
-        qs = qs.filter(richiamare_il__date__gte=da_richiamare_da)
-    if da_richiamare_a:
-        qs = qs.filter(richiamare_il__date__lte=da_richiamare_a)
 
-    # Sort opzionale
-    sort = request.GET.get("sort", "")
-    allowed = {"nome", "-nome", "cognome", "-cognome", "creato_il", "-creato_il", "richiamare_il", "-richiamare_il"}
-    if sort in allowed:
-        qs = qs.order_by(sort)
+    # Sort (+ appuntamento_previsto abilitato)
+    sort = request.GET.get("sort", "").strip()
+    allowed = {
+        "nome", "-nome",
+        "cognome", "-cognome",
+        "creato_il", "-creato_il",
+        "appuntamento_previsto", "-appuntamento_previsto",
+        "richiamare_il", "-richiamare_il", "primo_contatto", "-primo_contatto",
+        "provenienza", "-provenienza",
+        "consulente", "-consulente",
+    }
+    if sort not in allowed:
+        sort = "-creato_il"
+    qs = qs.order_by(sort)
 
     ha_negativi = qs.filter(stato="negativo").exists()
 
-    # Paginazione
-    paginator = Paginator(qs, 20)
+    per_page = _get_per_page(request, 20, 100)
+    paginator = Paginator(qs, per_page)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    return render(request, "crm/lead_lista.html", {
-        "leads": page_obj.object_list,
-        "page_obj": page_obj,
-        "q": q, "stato": stato, "dal": dal, "al": al,
-        "no_risposta": "1" if only_no_risposta else "",
-        "msg_inviato": "1" if only_msg_inviato else "",
-        "in_acquisizione": "1" if only_acquisizione else "",
-        "richiamo_da": da_richiamare_da,
-        "richiamo_a": da_richiamare_a,
-        "sort": sort,
-        "ha_negativi": ha_negativi,
-    })
+    return render(
+        request,
+        "crm/lead_lista.html",
+        {
+            "leads": page_obj.object_list,
+            "page_obj": page_obj,
+            "q": q,
+            "stato": stato,
+            "dal": dal_raw,
+            "al": al_raw,
+            "no_risposta": "1" if only_no_risposta else "",
+            "msg_inviato": "1" if only_msg_inviato else "",
+            "in_acquisizione": "1" if only_acquisizione else "",
+            "sort": sort,
+            "ha_negativi": ha_negativi,
+            "per": per_page,
+            "appt": appt,  # nuovo quick filter
+        },
+    )
 
 
 @login_required
@@ -451,6 +562,7 @@ def lead_nuovo(request):
                 return redirect("clienti_tutti")
             messages.success(request, "Lead salvato correttamente.")
             return redirect("lead_lista")
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = LeadForm()
     return render(request, "crm/lead_form.html", {"form": form})
@@ -471,16 +583,15 @@ def lead_modifica(request, lead_id):
                 return redirect("clienti_tutti")
             messages.success(request, "Lead aggiornato correttamente.")
             return redirect("lead_lista")
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = LeadForm(instance=lead)
     return render(request, "crm/lead_form.html", {"form": form, "lead": lead, "is_edit": True})
 
 
-# --- Toggle consulenza, no_risposta, messaggio_inviato ---
-def _back(request):
-    return request.META.get("HTTP_REFERER") or reverse("lead_lista")
-
-
+# ==============================
+# Lead toggles (POST only)
+# ==============================
 @login_required
 @user_passes_test(has_portal_access)
 @require_POST

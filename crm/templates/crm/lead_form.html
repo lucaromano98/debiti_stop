@@ -1,87 +1,169 @@
 {% extends "crm/base.html" %}
+{% block title %}{% if is_edit %}Modifica Lead · Debiti Stop{% else %}Nuovo Lead · Debiti Stop{% endif %}{% endblock %}
+
 {% block content %}
-  <h2>{% if is_edit %}Modifica {% else %} Nuovo Lead{% endif %}</h2>
-  
-
-  <form method="post">
-    {% csrf_token %}
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-      <p>
-        <label for="{{ form.nome.id_for_label }}">Nome</label><br>
-        {{ form.nome }}
-      </p>
-      <p>
-        <label for="{{ form.cognome.id_for_label }}">Cognome</label><br>
-        {{ form.cognome }}
-      </p>
-      <p>
-        <label for="{{ form.telefono.id_for_label }}">Telefono</label><br>
-        {{ form.telefono }}
-      </p>
-      <p>
-        <label for="{{ form.email.id_for_label }}">Email</label><br>
-        {{ form.email }}
-      </p>
-      <p style="grid-column:1 / -1;">
-        <label for="{{ form.stato.id_for_label }}">Stato</label><br>
-        {{ form.stato }}
-      </p>
-
-      <!-- Blocco che appare se stato = in_corso -->
-      <div id="blk-app" style="grid-column:1 / -1; display:none;">
-        <label for="{{ form.appuntamento_previsto.id_for_label }}">Appuntamento previsto</label><br>
-        {{ form.appuntamento_previsto }}
-        <small>Seleziona data e ora</small>
-      </div>
-
-      <!-- Blocco che appare se stato = negativo -->
-      <div id="blk-motivo" style="grid-column:1 / -1; display:none;">
-        <label for="{{ form.motivazione_negativa.id_for_label }}">Motivazione (esito negativo)</label><br>
-        {{ form.motivazione_negativa }}
-      </div>
-
-      <p style="grid-column:1 / -1;">
-        <label for="{{ form.note_operatori.id_for_label }}">Note per operatori</label><br>
-        {{ form.note_operatori }}
-      </p>
+<div class="mx-auto max-w-6xl space-y-6">
+  <!-- Header -->
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="text-sm text-slate-500 dark:text-slate-400">Leads</p>
+      <h1 class="text-2xl font-extrabold tracking-tight">{% if is_edit %}Modifica Lead{% else %}Nuovo Lead{% endif %}</h1>
     </div>
+    <a href="{% url 'lead_lista' %}" class="btn btn-ghost">⟵ Torna alla lista</a>
+  </div>
 
-    {% if form.errors %}
-      <div style="color:#b00; margin-top:8px;">{{ form.errors }}</div>
-    {% endif %}
+  <!-- Card -->
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <form method="post" class="space-y-6" id="lead-form">
+        {% csrf_token %}
 
-    <div style="margin-top:12px;">
-      <button type="submit">{% if is_edit %}Salva modifiche{% else %}Salva lead{% endif %}</button>
-      <a href="{% url 'lead_lista' %}">Annulla</a>
+        <!-- Grid campi principali -->
+        <div class="grid gap-5 md:grid-cols-2">
+          <!-- Nome -->
+          <div class="form-control">
+            <label class="label" for="{{ form.nome.id_for_label }}">
+              <span class="label-text">Nome</span>
+            </label>
+            {{ form.nome }}
+            {% if form.nome.errors %}
+              <div class="alert alert-error mt-2 py-2">{{ form.nome.errors }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Cognome -->
+          <div class="form-control">
+            <label class="label" for="{{ form.cognome.id_for_label }}">
+              <span class="label-text">Cognome</span>
+            </label>
+            {{ form.cognome }}
+            {% if form.cognome.errors %}
+              <div class="alert alert-error mt-2 py-2">{{ form.cognome.errors }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Telefono -->
+          <div class="form-control md:col-span-1">
+            <label class="label" for="{{ form.telefono.id_for_label }}">
+              <span class="label-text">Telefono</span>
+            </label>
+            {{ form.telefono }}
+            {% if form.telefono.errors %}
+              <div class="alert alert-error mt-2 py-2">{{ form.telefono.errors }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Email -->
+          <div class="form-control md:col-span-1">
+            <label class="label" for="{{ form.email.id_for_label }}">
+              <span class="label-text">Email</span>
+            </label>
+            {{ form.email }}
+            {% if form.email.errors %}
+              <div class="alert alert-error mt-2 py-2">{{ form.email.errors }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Stato -->
+          <div class="form-control md:col-span-2">
+            <label class="label" for="{{ form.stato.id_for_label }}">
+              <span class="label-text">Stato</span>
+            </label>
+            {{ form.stato }}
+            {% if form.stato.errors %}
+              <div class="alert alert-error mt-2 py-2">{{ form.stato.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Provenienza -->
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Provenienza</span></div>
+            {{ form.provenienza }}
+          </label>
+          
+          <!-- Consulente -->
+          <label class="form-control">
+            <div class="label"><span class="label-text">Chi farà la consulenza?</span></div>
+            {{ form.consulente }}
+          </label>
+        </div>
+
+        <label class="form-control md:col-span-2">
+          <div class="label"><span class="label-text">Data/ora primo contatto</span></div>
+          {{ form.primo_contatto }}
+        </label>
+
+        <!-- Appuntamento previsto (solo se stato = in_corso) -->
+        <div id="blk-app" class="form-control hidden">
+          <label class="label" for="{{ form.appuntamento_previsto.id_for_label }}">
+            <span class="label-text">Appuntamento previsto</span>
+          </label>
+          <div class="flex items-center gap-3">
+            {{ form.appuntamento_previsto }}
+            <span class="text-sm text-slate-500 dark:text-slate-400">Seleziona data e ora</span>
+          </div>
+          {% if form.appuntamento_previsto.errors %}
+            <div class="alert alert-error mt-2 py-2">{{ form.appuntamento_previsto.errors }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Motivazione negativa (solo se stato = negativo) -->
+        <div id="blk-motivo" class="form-control hidden">
+          <label class="label" for="{{ form.motivazione_negativa.id_for_label }}">
+            <span class="label-text">Motivazione (esito negativo)</span>
+          </label>
+          {{ form.motivazione_negativa }}
+          {% if form.motivazione_negativa.errors %}
+            <div class="alert alert-error mt-2 py-2">{{ form.motivazione_negativa.errors }}</div>
+          {% endif %}
+        </div>
+
+        <!-- Note operatori -->
+        <div class="form-control">
+          <label class="label" for="{{ form.note_operatori.id_for_label }}">
+            <span class="label-text">Note per operatori</span>
+          </label>
+          {{ form.note_operatori }}
+          {% if form.note_operatori.errors %}
+            <div class="alert alert-error mt-2 py-2">{{ form.note_operatori.errors }}</div>
+          {% endif %}
+        </div>
+
+        {% if form.errors %}
+          <div class="alert alert-error">
+            <span>Ci sono errori nel form. Controlla i campi evidenziati.</span>
+          </div>
+        {% endif %}
+
+        <!-- Azioni -->
+        <div class="flex items-center justify-end gap-3">
+          <a href="{% url 'lead_lista' %}" class="btn btn-ghost">Annulla</a>
+          <button type="submit" class="btn btn-primary">
+            {% if is_edit %}Salva modifiche{% else %}Salva lead{% endif %}
+          </button>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
+</div>
 
-    <script>
-        (function(){
-            const stato = document.getElementById("id_stato");
-            const blkApp = document.getElementById("blk-app");
-            const blkMot = document.getElementById("blk-motivo");
+<!-- Toggle logica stato → blocchi -->
+<script>
+  (function () {
+    const stato = document.getElementById("id_stato");
+    const blkApp = document.getElementById("blk-app");
+    const blkMot = document.getElementById("blk-motivo");
+    if (!stato || !blkApp || !blkMot) return;
 
-            function toggleBlocks() {
-            const v = stato.value;
-            if (v === "in_corso") {
-                blkApp.style.display = "block";
-                blkMot.style.display = "none";
-            } else if (v === "negativo") {
-                blkApp.style.display = "none";
-                blkMot.style.display = "block";
-            } else { // v === "positivo" o altro
-                blkApp.style.display = "none";
-                blkMot.style.display = "none";
-            }
-            }
-
-            if (stato) {
-            toggleBlocks();
-            stato.addEventListener("change", toggleBlocks);
-            }
-        })();
-    </script>
-
+    function toggleBlocks() {
+      const v = stato.value;
+      blkApp.classList.toggle('hidden', v !== 'in_corso');
+      blkMot.classList.toggle('hidden', v !== 'negativo');
+    }
+    toggleBlocks(); // iniziale
+    stato.addEventListener('change', toggleBlocks);
+  })();
+</script>
 {% endblock %}

@@ -1,188 +1,227 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-        {% extends "crm/base.html" %}
-    {% block content %}
-    <h2>Cliente: {{ cliente.nome }} {{ cliente.cognome }}</h2>
-    <p>
-        <strong>Folder Cliente:</strong>
-        clienti/{{ cliente.id }}_{{ cliente.nome|slugify }}-{{ cliente.cognome|slugify }}/
-    </p>
-    <p><strong>Email:</strong> {{ cliente.email|default:"—" }}</p>
-    <p><strong>Telefono:</strong> {{ cliente.telefono|default:"—" }}</p>
-    <p><strong>Stato:</strong> {{ cliente.get_stato_display }}</p>
-    <p><a href="{% url 'cliente_modifica' cliente.id %}">✏️ Modifica</a> |
-    <a href="{% url 'cliente_elimina' cliente.id %}">🗑️ Elimina</a></p>
+{% extends "crm/base.html" %}
+{% load static %}
+{% load i18n %}
+{% load l10n %}
+{% load tz %}
 
-    <hr />
-        <h3>Documenti</h3>
-        <p>
-            <a href="{% url 'documento_nuovo' cliente.id %}">➕ Carica documento</a>
-            |
-            <a href="{% url 'documenti_zip_cliente' cliente.id %}">⬇️ Scarica tutti (ZIP)</a>
-            </p>
+{% block title %}{{ cliente.nome }} {{ cliente.cognome }} · Cliente{% endblock %}
 
-        <div class="tabs" style="display:flex; gap:12px; margin-bottom:8px;">
-            <button type="button" class="tab-btn" data-target="#tab-anag">Documenti anagrafici</button>
-            <button type="button" class="tab-btn" data-target="#tab-prat">Pratiche</button>
-            <button type="button" class="tab-btn" data-target="#tab-leg">Atti legali</button>
-        </div>
+{% block content %}
+<div class="mx-auto max-w-[min(1400px,100%)] space-y-6">
 
-            <h4> Tutti i documenti del cliente</h4>
-            <ul>
-            {% for d in cliente.documenti.all %}
-                <li>
-                ID {{ d.id }} — {{ d.get_categoria_display }} — {{ d.file.name }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                </li>
-            {% empty %}
-                <li>(nessun documento)</li>
-            {% endfor %}
-            </ul>
+  <!-- HEADER -->
+  <div class="card bg-base-100 shadow">
+    <div class="card-body gap-4">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight">
+            {{ cliente.nome }} {{ cliente.cognome }}
+            {% if cliente.stato == 'active' %}
+              <span class="badge badge-success badge-outline align-middle ml-2">Attivo</span>
+            {% elif cliente.stato == 'inactive' %}
+              <span class="badge badge-warning badge-outline align-middle ml-2">Non attivo</span>
+            {% elif cliente.stato == 'legal' %}
+              <span class="badge badge-info badge-outline align-middle ml-2">Legale</span>
+            {% else %}
+              <span class="badge badge-ghost align-middle ml-2">{{ cliente.stato|default:"—" }}</span>
+            {% endif %}
+          </h1>
 
-
-
-        <div id="tab-anag" class="tab-panel">
-        <ul>
-            {% for d in docs_anag %}
-            <li>
-                <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
-                — {{ d.descrizione|default:"(senza descrizione)" }}
-                — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina</a>
-            </li>
-            {% empty %}
-            <li>Nessun documento anagrafico.</li>
-            {% endfor %}
-        </ul>
-        </div>
-
-        <div id="tab-prat" class="tab-panel" style="display:none;">
-        <ul>
-            {% for d in docs_prat %}
-            <li>
-                <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
-                — {{ d.descrizione|default:"(senza descrizione)" }}
-                — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina </a>
-            </li>
-            {% empty %}
-            <li>Nessun documento di pratica.</li>
-            {% endfor %}
-        </ul>
-        </div>
-
-        <div id="tab-leg" class="tab-panel" style="display:none;">
-        <ul>
-            {% for d in docs_leg %}
-            <li>
-                <a href="{{ d.file.url }}" target="_blank">{{ d.file.name|slice:'-40:' }}</a>
-                — {{ d.descrizione|default:"(senza descrizione)" }}
-                — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                — <a href="{% url 'documento_elimina' d.id %}">🗑️ Elimina</a>
-            </li>
-            {% empty %}
-            <li>Nessun atto legale.</li>
-            {% endfor %}
-        </ul>
-        </div>
-    <hr />
-    <script>
-        (function(){
-            const btns = document.querySelectorAll('.tab-btn');
-            const panels = document.querySelectorAll('.tab-panel');
-            btns.forEach(btn => btn.addEventListener('click', () => {
-            panels.forEach(p => p.style.display = 'none');
-            document.querySelector(btn.dataset.target).style.display = 'block';
-            }));
-        })();
-    </script>
-
-    <h3>Pratiche</h3>
-    <p><a href="{% url 'pratica_nuova' cliente.id %}">➕ Nuova pratica</a></p>
-    <ul>
-    {% for p in pratiche %}
-        <li>
-        <strong>{{ p.titolo|default:"(senza titolo)" }}</strong>
-        — {{ p.importo|default:"—" }} — Attiva: {{ p.pratica_attiva|yesno:"Sì,No" }}
-        — <a href="{% url 'pratica_modifica' p.id %}">✏️</a>
-        — <a href="{% url 'pratica_elimina' p.id %}">🗑️</a>
-        </li>
-    {% empty %}
-        <li>Nessuna pratica.</li>
-    {% endfor %}
-    </ul>
-
-    
-        <hr />
-        <h3>Note</h3>
-
-        <p><button id="openNotaModal">➕ Aggiungi nota</button></p>
-
-       <ul>
-            {% for n in note %}
-                <li>
-                <strong>{{ n.autore_nome }}</strong> — {{ n.creata_il|date:"d/m/Y H:i" }}<br/>
-                {{ n.testo|linebreaksbr }}<br/>
-                <a href="{% url 'nota_modifica' n.id %}">✏️ Modifica</a>
-                •
-                <a href="{% url 'nota_elimina' n.id %}">🗑️ Elimina</a>
-                </li>
-            {% empty %}
-                <li>Nessuna nota.</li>
-            {% endfor %}
-        </ul>
-
-
-        <!-- MODAL: aggiungi nota -->
-        <div id="notaModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);">
-        <div style="background:#fff; max-width:520px; margin:10% auto; padding:16px; border-radius:8px; position:relative;">
-            <h4>Nuova nota</h4>
-            <form method="post" action="{% url 'nota_crea' cliente.id %}">
-            {% csrf_token %}
-            <p>
-                <label for="id_autore_nome">Nome</label><br/>
-                {{ nota_form.autore_nome }}
-            </p>
-            <p>
-                <label for="id_testo">Nota</label><br/>
-                {{ nota_form.testo }}
-            </p>
-            <div style="margin-top:8px;">
-                <button type="submit">Salva</button>
-                <button type="button" id="closeNotaModal">Annulla</button>
+          <div class="mt-2 grid gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+            <div><span class="font-semibold">Email:</span> {{ cliente.email|default:"—" }}</div>
+            <div><span class="font-semibold">Telefono:</span> {{ cliente.telefono|default:"—" }}</div>
+            <div>
+              <span class="font-semibold">Folder Cliente:</span>
+              client/{{ cliente.id }}_{{ cliente.nome|slugify }}-{{ cliente.cognome|slugify }}
             </div>
-            </form>
+          </div>
         </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="{% url 'cliente_modifica' cliente.id %}" class="btn btn-ghost">✏️ Modifica</a>
+          <a href="{% url 'cliente_elimina' cliente.id %}" class="btn btn-outline">🗑️ Elimina</a>
+          <a href="{% url 'clienti_tutti' %}" class="btn">⬅️ Torna alla lista</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRID: Documenti + Pratiche -->
+  <!-- DOCUMENTI -->
+<section class="lg:col-span-2">
+  <div class="card bg-base-100 shadow">
+    <div class="card-body gap-4">
+
+      <div class="flex items-center justify-between">
+        <h2 class="card-title">Documenti</h2>
+        <div class="flex items-center gap-2">
+          <a class="btn btn-ghost btn-sm" href="{% url 'documento_nuovo' cliente.id %}">+ Carica documento</a>
+          <a class="btn btn-outline btn-sm" href="{% url 'documenti_zip_cliente' cliente.id %}">📦 Scarica tutti (ZIP)</a>
+        </div>
+      </div>
+
+      <!-- Tabs con bottoni (niente radio) -->
+      <div class="tabs tabs-lifted" role="tablist" id="docs-tabs">
+        <button type="button" role="tab" class="tab tab-active" data-tab="anag">Anagrafici</button>
+        <button type="button" role="tab" class="tab" data-tab="prat">Pratiche</button>
+        <button type="button" role="tab" class="tab" data-tab="leg">Legali</button>
+      </div>
+
+      <div class="rounded-box border border-base-300 p-4">
+        <!-- Pannello: Anagrafici -->
+        <div id="tab-anag" class="tab-panel">
+          {% if docs_anag %}
+            <ul class="menu gap-2">
+              {% for d in docs_anag %}
+                <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+                  <div class="min-w-0">
+                    <div class="truncate font-medium">{{ d.nome|default:d.file.name }}</div>
+                    <div class="text-xs opacity-70">
+                      ID {{ d.id }} — {{ d.categoria|title }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                    </div>
+                  </div>
+                  <form method="post" action="{% url 'documento_elimina' d.id %}" class="shrink-0">
+                    {% csrf_token %}
+                    <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-sm opacity-70">Nessun documento anagrafico.</div>
+          {% endif %}
         </div>
 
-        <script>
-        (function(){
-            const openBtn = document.getElementById('openNotaModal');
-            const closeBtn = document.getElementById('closeNotaModal');
-            const modal = document.getElementById('notaModal');
-            if(openBtn && modal){
-            openBtn.addEventListener('click', function(){ modal.style.display = 'block'; });
-            }
-            if(closeBtn && modal){
-            closeBtn.addEventListener('click', function(){ modal.style.display = 'none'; });
-            }
-            // chiudi cliccando sullo sfondo scuro
-            if(modal){
-            modal.addEventListener('click', function(e){
-                if(e.target === modal){ modal.style.display = 'none'; }
-            });
-            }
-        })();
-        </script>
+        <!-- Pannello: Pratiche -->
+        <div id="tab-prat" class="tab-panel hidden">
+          {% if docs_prat %}
+            <ul class="menu gap-2">
+              {% for d in docs_prat %}
+                <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+                  <div class="min-w-0">
+                    <div class="truncate font-medium">{{ d.nome|default:d.file.name }}</div>
+                    <div class="text-xs opacity-70">
+                      ID {{ d.id }} — {{ d.categoria|title }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                    </div>
+                  </div>
+                  <form method="post" action="{% url 'documento_elimina' d.id %}" class="shrink-0">
+                    {% csrf_token %}
+                    <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-sm opacity-70">Nessun documento pratiche.</div>
+          {% endif %}
+        </div>
+
+        <!-- Pannello: Legali -->
+        <div id="tab-leg" class="tab-panel hidden">
+          {% if docs_leg %}
+            <ul class="menu gap-2">
+              {% for d in docs_leg %}
+                <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+                  <div class="min-w-0">
+                    <div class="truncate font-medium">{{ d.nome|default:d.file.name }}</div>
+                    <div class="text-xs opacity-70">
+                      ID {{ d.id }} — {{ d.categoria|title }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                    </div>
+                  </div>
+                  <form method="post" action="{% url 'documento_elimina' d.id %}" class="shrink-0">
+                    {% csrf_token %}
+                    <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-sm opacity-70">Nessun documento legale.</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<script>
+  // tabs: attiva/disattiva pannelli senza radio inputs
+  (function () {
+    const root = document.getElementById('docs-tabs');
+    if (!root) return;
+
+    const btns = Array.from(root.querySelectorAll('[data-tab]'));
+    const panels = {
+      anag: document.getElementById('tab-anag'),
+      prat: document.getElementById('tab-prat'),
+      leg:  document.getElementById('tab-leg'),
+    };
+
+    function activate(key) {
+      // bottoni
+      btns.forEach(b => b.classList.toggle('tab-active', b.dataset.tab === key));
+      // pannelli
+      Object.entries(panels).forEach(([k, el]) => {
+        if (!el) return;
+        el.classList.toggle('hidden', k !== key);
+      });
+    }
+
+    btns.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
+    // stato iniziale
+    activate('anag');
+  })();
+</script>
 
 
+  <!-- NOTE -->
+  <section>
+    <div class="card bg-base-100 shadow">
+      <div class="card-body gap-4">
+        <div class="flex items-center justify-between">
+          <h2 class="card-title">Note</h2>
+          <details class="dropdown dropdown-end">
+            <summary class="btn btn-sm">+ Aggiungi nota</summary>
+            <div class="dropdown-content z-[1] card card-compact bg-base-100 shadow p-3 w-96">
+              <form method="post" action="{% url 'nota_crea' cliente.id %}" class="space-y-2">
+                {% csrf_token %}
+                <label class="form-control">
+                  <textarea name="{{ nota_form.testo.name }}" class="textarea textarea-bordered" rows="4" placeholder="Scrivi una nota..."></textarea>
+                </label>
+                <button class="btn btn-primary btn-sm" type="submit">Salva nota</button>
+              </form>
+            </div>
+          </details>
+        </div>
 
-    <p><a href="{% url 'clienti_tutti' %}">⬅️ Torna alla lista</a></p>
-    {% endblock %}
-</body>
-</html>
+        {% if note %}
+          <ol class="relative border-s border-base-300/60 dark:border-base-200/10 pl-6 space-y-4">
+            {% for n in note %}
+              <li>
+                <div class="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-primary"></div>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold">
+                      {{ n.autore|default:"" }} <span class="opacity-60">— {{ n.creata_il|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <p class="mt-1 text-sm whitespace-pre-line">{{ n.testo }}</p>
+                  </div>
+                  <div class="shrink-0 flex items-center gap-1">
+                    <a href="{% url 'nota_modifica' n.id %}" class="btn btn-ghost btn-xs">Modifica</a>
+                    <a href="{% url 'nota_elimina' n.id %}" class="btn btn-outline btn-xs">Elimina</a>
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <div class="text-sm opacity-70">Nessuna nota.</div>
+        {% endif %}
+
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

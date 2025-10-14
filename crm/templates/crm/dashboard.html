@@ -1,17 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    
-    {% extends "crm/base.html" %}
+{% extends "crm/base.html" %}
+{% load static %}
+{% block title %}Debiti Stop · QG{% endblock %}
 
-    {% block content %}
-        <h1>Debiti Stop</h1>
-        <p>Benvenuto nel QG di Debiti Stop!</p>
-    {% endblock %}
-</body>
-</html>
+{% block content %}
+<div class="grid min-h-[80vh]">
+  <!-- wrapper centrale (verticalmente) -->
+  <div class="m-auto w-full max-w-3xl space-y-5">
+    <!-- TITOLO a sinistra -->
+    <h1 class="text-left text-2xl md:text-3xl font-extrabold tracking-tight">
+      BENVENUTO NEL
+      <span class="bg-gradient-to-r from-indigo-500 to-cyan-400 bg-clip-text text-transparent">
+        QUARTIER GENERALE DI:
+      </span>
+    </h1>
+
+    <!-- LOGO: di default centrato sotto -->
+    <div class="mx-auto w-[220px] md:w-[280px] lg:w-[320px]">
+      <img src="{% static 'img/debitistop_logo.png' %}" alt="Debiti Stop"
+           class="block w-full h-auto object-contain select-none" draggable="false" />
+    </div>
+    {# Se vuoi il logo a sinistra come il titolo, sostituisci 'mx-auto' con 'ml-0' qui sopra #}
+  </div>
+</div>
+{% endblock %}
+
+

@@ -1,101 +1,148 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    {% extends "crm/base.html" %}
-    {% block content %}
-        <h2>Tutti i clienti</h2>
+{% extends "crm/base.html" %}
+{% load qparams %}
 
-        <p><a href="{% url 'cliente_nuovo' %}">+ Aggiungi cliente</a></p>
+{% block title %}Tutti i clienti · Debiti Stop{% endblock %}
 
-        <form method="get" style="margin:10px 0; display:flex; gap:8px; flex-wrap:wrap;">
-            <input type="text" name="q" value="{{ q }}" placeholder="Cerca nome, email, telefono">
+{% block content %}
+<div class="mx-auto max-w-[min(1400px,100%)] space-y-5">
 
-            <select name="stato">
-                <option value="">Tutti gli stati</option>
-                <option value="active"   {% if stato == "active" %}selected{% endif %}>Attivi</option>
-                <option value="inactive" {% if stato == "inactive" %}selected{% endif %}>Non Attivi</option>
-                <option value="legal"    {% if stato == "legal" %}selected{% endif %}>Legale</option>
-            </select>
+  <!-- Header + CTA -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-xl font-extrabold">Tutti i clienti</h1>
+    <div class="flex items-center gap-2">
+      <a class="btn btn-primary" href="{% url 'cliente_nuovo' %}">+ Aggiungi cliente</a>
+    </div>
+  </div>
 
-            <input type="date" name="dal" value="{{ dal }}">
-            <input type="date" name="al"  value="{{ al }}">
+  <!-- Filtri -->
+  <form method="get" class="card bg-base-100 shadow">
+    <div class="card-body gap-3">
+      <div class="grid gap-3 md:grid-cols-4">
+        <label class="form-control md:col-span-2">
+          <div class="label"><span class="label-text">Cerca (nome, email, telefono)</span></div>
+          <input type="text" name="q" value="{{ q }}" class="input input-bordered w-full" />
+        </label>
 
-            <label style="display:flex; align-items:center; gap:4px;">
-                <input type="checkbox" name="has_docs" value="si" {% if has_docs == "si" %}checked{% endif %}>
-                Con documenti
-            </label>
+        <label class="form-control">
+          <div class="label"><span class="label-text">Stato</span></div>
+          <select name="stato" class="select select-bordered w-full">
+            <option value="">Tutti gli stati</option>
+            <option value="active"   {% if stato == 'active' %}selected{% endif %}>Attivo</option>
+            <option value="inactive" {% if stato == 'inactive' %}selected{% endif %}>Non attivo</option>
+            <option value="legal"    {% if stato == 'legal' %}selected{% endif %}>Legale</option>
+          </select>
+        </label>
 
-            <label style="display:flex; align-items:center; gap:4px;">
-                <input type="checkbox" name="has_prat" value="si" {% if has_prat == "si" %}checked{% endif %}>
-                Con pratiche
-            </label>
+        <div class="grid grid-cols-2 gap-3 md:col-span-1">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Dal</span></div>
+            <input type="date" name="dal" value="{{ dal }}" class="input input-bordered w-full" />
+          </label>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Al</span></div>
+            <input type="date" name="al" value="{{ al }}" class="input input-bordered w-full" />
+          </label>
+        </div>
+      </div>
 
-            <button type="submit">Filtra</button>
-            <a href="{% url 'clienti_tutti' %}">Reset</a>
-        </form>
+      <div class="flex flex-wrap items-center gap-4 pt-1">
+        <label class="label cursor-pointer gap-2">
+          <input type="checkbox" name="has_docs" value="si" class="checkbox" {% if has_docs == 'si' %}checked{% endif %}/>
+          <span class="label-text">Con documenti</span>
+        </label>
+        <label class="label cursor-pointer gap-2">
+          <input type="checkbox" name="has_prat" value="si" class="checkbox" {% if has_prat == 'si' %}checked{% endif %}/>
+          <span class="label-text">Con pratiche</span>
+        </label>
 
-        <table border="1" cellpadding="6">
-            <thead>
-                <tr>
-                <th>
-                    <a href="?sort=nome">Nome ▲</a> | <a href="?sort=-nome">▼</a>
-                </th>
-                <th>
-                    <a href="?sort=cognome">Cognome ▲</a> | <a href="?sort=-cognome">▼</a>
-                </th>
-                <th>Email</th>
-                <th>Telefono</th>
-                <th>Residenza</th>
-                <th>Esperienza Finanziaria</th>
-                <th>Visure</th>
-                <th>
-                    <a href="?sort=stato">Stato ▲</a> | <a href="?sort=-stato">▼</a>
-                </th>
-                <th>
-                    <a href="?sort=data_creazione">Creato ▲</a> | <a href="?sort=-data_creazione">▼</a>
-                </th>
-                <th>Azioni</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in clienti %}
-                <tr>
-                    <td>{{ c.nome }}</td>
-                    <td>{{ c.cognome }}</td>
-                    <td>{{ c.email|default:"—" }}</td>
-                    <td>{{ c.telefono|default:"—" }}</td>
-                    <td>{{ c.residenza|default:"—" }}</td>
-                    <td>{{ c.esperienza_finanziaria|default:"—" }}</td>
-                    <td>{{ c.visure|default:"—" }}</td>
-                    <td>{{ c.get_stato_display }}</td>
-                    <td>{{ c.data_creazione|date:"d/m/Y H:i" }}</td>
-                    <td><a href="{% url 'cliente_dettaglio' c.id %}">Apri</a></td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="10">Nessun cliente.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="ml-auto flex items-center gap-2">
+          <button type="submit" class="btn btn-primary">Filtra</button>
+          <a class="btn btn-ghost" href="{% url 'clienti_tutti' %}">Reset</a>
+        </div>
+      </div>
+    </div>
+  </form>
 
+  <!-- Tabella -->
+  <div class="table-shell">
+    <div class="table-scroll">
+      <table class="table table-zebra table-app">
+        <thead>
+          <tr>
+            <th class="th-min">#</th>
+            <th>
+              <a href="{% qurl sort='nome' page=None %}" class="link link-hover">Nome</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
+              <a href="{% qurl sort='cognome' page=None %}" class="link link-hover">Cognome</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>Email</th>
+            <th>Telefono</th>
+            <th>Residenza</th>
+            <th>Esperienza Finanziaria</th>
+            <th>Visure</th>
+            <th>
+              <a href="{% qurl sort='data_creazione' page=None %}" class="link link-hover">Creato</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>Stato</th>
+            <th class="th-min td-actions">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in clienti %}
+          <tr>
+            <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
+            <td class="td-nowrap">{{ c.nome }}</td>
+            <td class="td-nowrap">{{ c.cognome }}</td>
+            <td class="td-nowrap">{{ c.email|default:"—" }}</td>
+            <td class="td-nowrap">{{ c.telefono|default:"—" }}</td>
+            <td class="td-nowrap">{{ c.residenza|default:"—" }}</td>
+            <td class="max-w-[40ch] truncate">{{ c.esperienza_finanziaria|default:"—" }}</td>
+            <td class="td-nowrap">{{ c.visure|default:"—" }}</td>
+            <td class="td-nowrap">{{ c.data_creazione|date:"d/m/Y H:i" }}</td>
+            <td class="td-nowrap">
+              {% if c.stato == 'active' %}
+                <span class="badge-attivo">Attivo</span>
+              {% elif c.stato == 'inactive' %}
+                <span class="badge-negativo">Non attivo</span>
+              {% elif c.stato == 'legal' %}
+                <span class="badge-in-corso">Legale</span>
+              {% else %}
+                <span class="badge badge-neutral">—</span>
+              {% endif %}
+            </td>
+            <td class="td-actions">
+              <div class="join">
+                <a href="{% url 'cliente_dettaglio' c.pk %}" class="btn btn-ghost btn-sm join-item">Apri</a>
+                <a href="{% url 'cliente_modifica' c.pk %}" class="btn btn-outline btn-sm join-item">Modifica</a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="11" class="text-center text-base-content/60 py-6">Nessun cliente trovato.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
-        {% if page_obj.paginator.num_pages > 1 %}
-            <div style="margin-top:10px; display:flex; gap:6px;">
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}&q={{ q }}&stato={{ stato }}&dal={{ dal }}&al={{ al }}&has_docs={{ has_docs }}&has_prat={{ has_prat }}">« Prec</a>
-                {% endif %}
-                <span>Pagina {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&q={{ q }}&stato={{ stato }}&dal={{ dal }}&al={{ al }}&has_docs={{ has_docs }}&has_prat={{ has_prat }}">Succ »</a>
-                {% endif %}
-            </div>
-        {% endif %}
+    <!-- Paginazione -->
+    <div class="pager">
+      <div class="text-sm opacity-70">
+        Pagina {{ page_obj.number }} di {{ page_obj.paginator.num_pages }}
+      </div>
+      <div class="join">
+        <a class="btn join-item" href="{% qurl page=1 %}"                       {% if not page_obj.has_previous %}disabled{% endif %}>«</a>
+        <a class="btn join-item" href="{% if page_obj.has_previous %}{% qurl page=page_obj.previous_page_number %}{% endif %}" {% if not page_obj.has_previous %}disabled{% endif %}>Prec</a>
+        <a class="btn join-item" href="{% if page_obj.has_next %}{% qurl page=page_obj.next_page_number %}{% endif %}"         {% if not page_obj.has_next %}disabled{% endif %}>Succ</a>
+        <a class="btn join-item" href="{% qurl page=page_obj.paginator.num_pages %}" {% if not page_obj.has_next %}disabled{% endif %}>»</a>
+      </div>
+    </div>
+  </div>
 
-    {% endblock %}
-
-</body>
-</html>
+</div>
+{% endblock %}

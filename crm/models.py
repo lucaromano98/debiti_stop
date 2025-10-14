@@ -3,9 +3,21 @@ from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 from django.utils.text import slugify
 from django.conf import settings
-import os 
-import time 
+import os
+import time
 
+
+# --- CONSULENTI ---
+class Consulente(models.Model):
+    nome = models.CharField(max_length=120, unique=True)
+    is_active = models.BooleanField(default=True)
+    creato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome
 
 
 # --- CLIENTI ---
@@ -32,14 +44,15 @@ class Cliente(models.Model):
 
 
 # --- DOCUMENTI ---
-
 def client_directory_path(instance, filename):
-    # media/client_<id>/<categoria>/<filename>
+    """
+    media/client_<id>/<categoria>/<safe_filename>
+    """
     cliente = instance.cliente
-    slug = slugify(f"{cliente.nome} - {cliente.cognome}") or f"cliente-{cliente.id}"
     base, ext = os.path.splitext(filename)
     safe_name = f"{int(time.time())}_{slugify(base)}{ext.lower()}"
-    return f"client_{instance.cliente.id}/{instance.categoria}/{filename}"
+    return f"client_{cliente.id}/{instance.categoria}/{safe_name}"
+
 
 class DocumentoCliente(models.Model):
     CATEGORIE = (
@@ -52,10 +65,13 @@ class DocumentoCliente(models.Model):
     categoria = models.CharField(max_length=20, choices=CATEGORIE, default="anagrafici")
     file = models.FileField(
         upload_to=client_directory_path,
-        validators=[FileExtensionValidator(allowed_extensions=["pdf", "png", "jpg", "jpeg"])]
+        validators=[FileExtensionValidator(allowed_extensions=["pdf", "png", "jpg", "jpeg"])],
     )
     descrizione = models.CharField(max_length=255, blank=True, null=True)
     caricato_il = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Documento {self.id} · {self.categoria} · {self.cliente}"
 
 
 # --- PRATICHE ---
@@ -75,24 +91,23 @@ class Pratiche(models.Model):
 # --- PROFILO UTENTE ---
 class ProfiloUtente(models.Model):
     RUOLI = (
-        ('admin', 'Admin'),
-        ('operatore', 'Operatore'),
+        ("admin", "Admin"),
+        ("operatore", "Operatore"),
     )
 
     utente = models.OneToOneField(User, on_delete=models.CASCADE)
-    ruolo = models.CharField(max_length=20, choices=RUOLI, default='operatore')
+    ruolo = models.CharField(max_length=20, choices=RUOLI, default="operatore")
 
     def __str__(self):
         return f"{self.utente.username} - {self.ruolo}"
-    
 
-# --- NOTES OPERATORI ---
 
+# --- NOTE OPERATORI ---
 class Nota(models.Model):
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.CASCADE,
-        related_name="note_entries"   # NON deve essere "note"
+        related_name="note_entries",  # NON 'note' per non confliggere
     )
     autore_nome = models.CharField(max_length=100)
     testo = models.TextField()
@@ -102,55 +117,85 @@ class Nota(models.Model):
         return f"Nota {self.id} per {self.cliente} – {self.autore_nome}"
 
 
-
 # --- LEAD ---
-
 class Lead(models.Model):
+    class Provenienza(models.TextChoices):
+        TIKTOK = "tiktok", "TikTok"
+        META = "meta", "Meta (Facebook/Instagram)"
+        GOOGLE = "google", "Google"
+        PASSAPAROLA = "passaparola", "Passaparola"
+
     STATO_CHOICES = (
         ("in_corso", "In corso"),
         ("negativo", "Esito negativo"),
         ("positivo", "Esito positivo"),
     )
 
+    # Anagrafica base
     nome = models.CharField(max_length=100)
     cognome = models.CharField(max_length=100)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
 
+    # Stato/Fasi
     stato = models.CharField(max_length=20, choices=STATO_CHOICES, default="in_corso")
     appuntamento_previsto = models.DateTimeField(blank=True, null=True)
     motivazione_negativa = models.TextField(blank=True, null=True)
-
     note_operatori = models.TextField(blank=True, null=True)
 
-    # --- AUDIT/Conversione/Archiviazione ---
+    # Nuovi campi richiesti
+    provenienza = models.CharField(
+        max_length=20,
+        choices=Provenienza.choices,
+        blank=True,
+        default="",
+        help_text="Da quale canale/social proviene il lead",
+    )
+    consulente = models.ForeignKey(
+        Consulente,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="leads",
+        help_text="Chi farà la consulenza",
+    )
+    primo_contatto = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Data/ora del primo contatto",
+    )
+
+    # Audit/Conversione/Archiviazione
     convertito = models.BooleanField(default=False)
     convertito_il = models.DateTimeField(null=True, blank=True)
     convertito_da = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="lead_convertiti"
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="lead_convertiti",
     )
     convertito_cliente = models.ForeignKey(
-        "Cliente", null=True, blank=True, on_delete=models.SET_NULL, related_name="da_lead"
+        "Cliente",
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="da_lead",
     )
     is_archiviato = models.BooleanField(default=False)
-
     creato_il = models.DateTimeField(auto_now_add=True)
 
-     # NUOVI CAMPI
-    consulenza_effettuata = models.BooleanField(default=False)   # spunta se la consulenza è stata fatta
-    no_risposta = models.BooleanField(default=False)             # il lead non risponde
-    messaggio_inviato = models.BooleanField(default=False)       # se no_risposta=True, spunta quando invii messaggio
-
-    in_acquisizione = models.BooleanField(default=False)         # per separare i “clienti in acquisizione”
-
-    richiamare_il = models.DateTimeField(null=True, blank=True) # data/ora per richiamare
+    # Flag operativi
+    consulenza_effettuata = models.BooleanField(default=False)
+    no_risposta = models.BooleanField(default=False)
+    messaggio_inviato = models.BooleanField(default=False)
+    in_acquisizione = models.BooleanField(default=False)
+    richiamare_il = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["stato"]),
             models.Index(fields=["convertito", "is_archiviato"]),
+            # utili se filtri spesso:
+            # models.Index(fields=["provenienza"]),
+            # models.Index(fields=["consulente"]),
         ]
 
     def __str__(self):
         return f"{self.nome} {self.cognome} ({self.get_stato_display()})"
-

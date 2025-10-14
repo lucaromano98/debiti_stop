@@ -1,36 +1,67 @@
 {% extends "crm/base.html" %}
-{% load crispy_forms_tags %}
 {% load static %}
 
 {% block title %}Accedi{% endblock %}
 {% block body_class %}auth{% endblock %}
 
 {% block content %}
-<div class="auth-wrap">
-  <div class="auth-card card">
-    <div class="auth-head">
-      <div class="auth-logo">
-        {# Se hai un logo: <img src="{% static 'img/logo.svg' %}" alt="Debiti Stop"> #}
-        <span class="brand">Debiti<span class="brand-accent"> Stop</span></span>
-      </div>
-      <h1 class="auth-title">Accedi</h1>
-    </div>
+<section class="relative min-h-[calc(100vh-3rem)] w-full grid place-items-center">
 
-    {% if messages %}
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'warning' }} mb-2">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-
-    <form method="post" novalidate class="auth-form">
-      {% csrf_token %}
-      {{ form|crispy }}
-      <button class="btn btn-primary w-100 mt-2">Entra</button>
-    </form>
-
-    <div class="auth-foot">
-      <a href="{% url 'password_reset' %}" class="muted">Password dimenticata?</a>
+  <!-- Layer decorativo solo in dark -->
+  <div class="pointer-events-none absolute inset-0 hidden dark:block">
+    <div class="absolute inset-0
+                bg-[radial-gradient(1200px_800px_at_15%_-10%,rgba(59,130,246,.22),transparent_60%),radial-gradient(1000px_700px_at_110%_110%,rgba(255,122,26,.22),transparent_55%)]">
     </div>
   </div>
-</div>
+
+  <div class="relative z-10 w-[92%] max-w-md rounded-3xl border
+              border-slate-200/70 bg-white/90 backdrop-blur-xl shadow-[0_20px_80px_rgba(0,0,0,.12)]
+              dark:bg-slate-900/70 dark:border-white/10 dark:shadow-[0_20px_80px_rgba(0,0,0,.45)]">
+
+    <div class="px-7 pt-8 pb-2 text-center">
+      <img src="{% static 'img/debitistop_logo.png' %}" alt="Debiti Stop"
+           class="mx-auto mb-4 h-20 w-auto md:h-24 lg:h-28 object-contain drop-shadow" />
+      <h1 class="text-2xl md:text-3xl font-extrabold mt-2 mb-6 text-center">Bentornato</h1>
+    </div>
+
+    <form method="post" class="px-7 pb-7 pt-4 space-y-4" novalidate>
+      {% csrf_token %}
+      <div>
+        <label for="id_username" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Username</label>
+        <input id="id_username" name="username" type="text" required autocomplete="username"
+               class="mt-1 block w-full rounded-2xl border px-3 py-2.5
+                      border-slate-300 bg-white text-slate-900 placeholder-slate-400
+                      shadow-inner outline-none
+                      focus:border-blue-500 focus:ring-4 focus:ring-blue-200
+                      dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 dark:placeholder-slate-500
+                      dark:focus:border-blue-400 dark:focus:ring-blue-900/50" />
+      </div>
+
+      <div>
+        <label for="id_password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+        <input id="id_password" name="password" type="password" required autocomplete="current-password"
+               class="mt-1 block w-full rounded-2xl border px-3 py-2.5
+                      border-slate-300 bg-white text-slate-900 placeholder-slate-400
+                      shadow-inner outline-none
+                      focus:border-blue-500 focus:ring-4 focus:ring-blue-200
+                      dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-100 dark:placeholder-slate-500
+                      dark:focus:border-blue-400 dark:focus:ring-blue-900/50" />
+      </div>
+
+      <button type="submit"
+        class="w-full rounded-2xl py-2.5 font-semibold shadow-md transition
+               bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700
+               focus:outline-none focus:ring-4 focus:ring-orange-300
+               dark:bg-orange-500 dark:hover:bg-orange-600 dark:focus:ring-orange-800">
+        Entra
+      </button>
+
+      <div class="text-center">
+        <a href="{% url 'password_reset' %}"
+           class="text-sm underline underline-offset-2 text-blue-600 hover:text-blue-700
+                  dark:text-blue-300 dark:hover:text-blue-200">Password dimenticata?</a>
+      </div>
+    </form>
+  </div>
+</section>
 {% endblock %}

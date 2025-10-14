@@ -1,6 +1,10 @@
 from django import forms
-from .models import Cliente, DocumentoCliente, Pratiche, Nota, Lead
+from .models import Cliente, DocumentoCliente, Pratiche, Nota, Lead, Consulente
 
+
+# =========================
+# Cliente
+# =========================
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
@@ -10,6 +14,10 @@ class ClienteForm(forms.ModelForm):
             "note", "stato",
         ]
 
+
+# =========================
+# Documento
+# =========================
 class DocumentoForm(forms.ModelForm):
     class Meta:
         model = DocumentoCliente
@@ -29,11 +37,18 @@ class DocumentoForm(forms.ModelForm):
         return f
 
 
+# =========================
+# Pratica
+# =========================
 class PraticaForm(forms.ModelForm):
     class Meta:
         model = Pratiche
         fields = ["titolo", "descrizione", "importo", "pratica_attiva"]
 
+
+# =========================
+# Nota
+# =========================
 class NotaForm(forms.ModelForm):
     class Meta:
         model = Nota
@@ -42,25 +57,94 @@ class NotaForm(forms.ModelForm):
             "testo": forms.Textarea(attrs={"rows": 4}),
         }
 
+
+# =========================
+# Lead
+# =========================
 class LeadForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
+            # anagrafica
             "nome", "cognome", "telefono", "email",
+            # stato/fasi
             "stato",
             "consulenza_effettuata", "no_risposta", "messaggio_inviato",
             "in_acquisizione",
-            "appuntamento_previsto",  
-            "richiamare_il",          
+            "appuntamento_previsto",
+            "richiamare_il",
             "motivazione_negativa",
             "note_operatori",
-        ] 
+            # nuovi campi
+            "provenienza", "consulente", "primo_contatto",
+        ]
         widgets = {
-            "appuntamento_previsto": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "richiamare_il": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "motivazione_negativa": forms.Textarea(attrs={"rows": 3}),
-            "note_operatori": forms.Textarea(attrs={"rows": 3}),  
-        }   
+            # base
+            "nome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "cognome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "telefono": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "email": forms.EmailInput(attrs={"class": "input input-bordered w-full"}),
+
+            # stato/fasi
+            "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "appuntamento_previsto": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
+            ),
+            "richiamare_il": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
+            ),
+            "motivazione_negativa": forms.Textarea(
+                attrs={"rows": 3, "class": "textarea textarea-bordered w-full"}
+            ),
+            "note_operatori": forms.Textarea(
+                attrs={"rows": 3, "class": "textarea textarea-bordered w-full"}
+            ),
+
+            # nuovi
+            "provenienza": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "consulente": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "primo_contatto": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Evita KeyError: usa get prima di manipolare il campo
+        field = self.fields.get("consulente")
+        if field is not None:
+            field.queryset = Consulente.objects.filter(is_active=True).order_by("nome")
+            field.required = False
+
+        field = self.fields.get("provenienza")
+        if field is not None:
+            field.required = False
+
+        field = self.fields.get("primo_contatto")
+        if field is not None:
+            field.required = False
+            field.input_formats = [
+                "%Y-%m-%dT%H:%M",  # HTML5 datetime-local
+                "%Y-%m-%d %H:%M",
+                "%d/%m/%Y %H:%M",
+            ]
+
+        field = self.fields.get("appuntamento_previsto")
+        if field is not None:
+            field.input_formats = [
+                "%Y-%m-%dT%H:%M",
+                "%Y-%m-%d %H:%M",
+                "%d/%m/%Y %H:%M",
+            ]
+
+        field = self.fields.get("richiamare_il")
+        if field is not None:
+            field.input_formats = [
+                "%Y-%m-%dT%H:%M",
+                "%Y-%m-%d %H:%M",
+                "%d/%m/%Y %H:%M",
+            ]
 
     def clean(self):
         cleaned = super().clean()
@@ -75,16 +159,12 @@ class LeadForm(forms.ModelForm):
         if stato == "negativo" and not motivazione_negativa:
             self.add_error("motivazione_negativa", "Inserisci la motivazione per l’esito negativo.")
 
-        # Se no risponde → puoi marcare "messaggio inviato" (non obbligatorio, ma coerente)
-        if no_risposta is True and messaggio_inviato is False:
-            # Non lo rendo obbligatorio, ma puoi decidere di forzarlo:
-            # self.add_error("messaggio_inviato", "Spunta 'Messaggio inviato' se il lead non risponde.")
-            pass
+        # Se no risponde e non marchi messaggio inviato (solo warning potenziale)
+        # if no_risposta and not messaggio_inviato:
+        #     self.add_error("messaggio_inviato", "Spunta 'Messaggio inviato' se il lead non risponde.")
 
-        # Se serve agenda: almeno uno tra appuntamento_previsto o richiamare_il
-        if not appuntamento_previsto and not richiamare_il and stato == "in_corso":
-            # Non obbligo, ma consigliato: se vuoi renderlo obbligatorio togli il commento:
-            # self.add_error("richiamare_il", "Imposta una data/ora di richiamo o un appuntamento.")
-            pass
+        # Se vuoi forzare agenda operativa in 'in_corso':
+        # if stato == "in_corso" and not appuntamento_previsto and not richiamare_il:
+        #     self.add_error("richiamare_il", "Imposta una data/ora di richiamo o un appuntamento.")
 
         return cleaned

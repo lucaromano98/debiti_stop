@@ -1,24 +1,54 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    
-    {% extends "crm/base.html" %}
-    {% block content %}
-    <h2>Nuovo cliente</h2>
-    <form method="post">
+{% extends "crm/base.html" %}
+{% block title %}Nuovo cliente · Debiti Stop{% endblock %}
+
+{% block content %}
+  <div class="mx-auto max-w-5xl space-y-6">
+
+    <!-- Header + breadcrumb light -->
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Clienti</p>
+        <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          Nuovo cliente
+        </h1>
+      </div>
+      <a href="{% url 'clienti_tutti' %}" class="btn-ghost">
+        ⟵ Torna alla lista
+      </a>
+    </div>
+
+    <!-- Card del form -->
+    <div class="form-card">
+      <form method="post" class="space-y-6">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Salva</button>
-    </form>
 
-    <p><a href="{% url 'clienti_tutti' %}">Torna alla lista</a></p>
-    {% endblock %}
+        <!-- Grid responsiva: 2 colonne su md+ -->
+        <div class="grid gap-5 md:grid-cols-2">
+          {% for field in form %}
+            <div class="space-y-1.5 md:col-span-1">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <p class="help-text">{{ field.help_text }}</p>
+              {% endif %}
+              {% if field.errors %}
+                {% for err in field.errors %}
+                  <p class="error-text">{{ err }}</p>
+                {% endfor %}
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
 
+        <!-- Azioni -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <a href="{% url 'clienti_tutti' %}" class="btn-ghost">Annulla</a>
+          <button type="submit" class="btn-primary">
+            Salva
+          </button>
+        </div>
+      </form>
+    </div>
 
-</body>
-</html>
+  </div>
+{% endblock %}
