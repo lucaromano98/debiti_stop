@@ -9,12 +9,16 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <h1 class="text-xl font-extrabold">Tutti i lead</h1>
-    <a class="btn btn-primary" href="{% url 'lead_nuovo' %}">+ Nuovo lead</a>
+    <div class="flex gap-2">
+      {# opzionale: export, se hai la view lead_export #}
+      {# <a class="btn btn-outline" href="{% url 'lead_export' %}?{{ request.GET.urlencode }}">⬇︎ Esporta CSV</a> #}
+      <a class="btn btn-primary" href="{% url 'lead_nuovo' %}">+ Nuovo lead</a>
+    </div>
   </div>
 
   <!-- Filtri -->
   <form method="get" class="card bg-base-100 shadow">
-    <div class="card-body gap-3">
+    <div class="card-body gap-4">
       <div class="grid gap-3 md:grid-cols-4">
         <label class="form-control md:col-span-2">
           <div class="label"><span class="label-text">Cerca (nome, email, telefono)</span></div>
@@ -43,36 +47,59 @@
         </div>
       </div>
 
+      {# --- NUOVI FILTRI: PROVENIENZA + CONSULENTE --- #}
+      <div class="grid gap-3 md:grid-cols-4">
+        <label class="form-control">
+          <div class="label"><span class="label-text">Provenienza</span></div>
+          <select name="provenienza" class="select select-bordered w-full">
+            <option value="">Tutte</option>
+            {% for val,label in PROVENIENZA_CHOICES %}
+              <option value="{{ val }}" {% if provenienza == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="form-control">
+          <div class="label"><span class="label-text">Consulente</span></div>
+          <select name="consulente" class="select select-bordered w-full">
+            <option value="">Tutti</option>
+            {% for c in consulenti %}
+              <option value="{{ c.id }}" {% if consulente_sel == c.id|stringformat:"s" %}selected{% endif %}>
+                {{ c.nome }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
       <!-- Quick filter appuntamenti -->
-        <div class="card bg-base-200/40">
+      <div class="card bg-base-200/40">
         <div class="card-body gap-2">
-            <div class="label"><span class="label-text font-semibold">Appuntamenti</span></div>
-            <div class="flex flex-wrap items-center gap-2">
+          <div class="label"><span class="label-text font-semibold">Appuntamenti</span></div>
+          <div class="flex flex-wrap items-center gap-2">
             <label class="btn btn-sm {% if not appt %}btn-active{% endif %}">
-                <input type="radio" name="appt" value="" class="hidden" {% if not appt %}checked{% endif %}>
-                Tutti
+              <input type="radio" name="appt" value="" class="hidden" {% if not appt %}checked{% endif %}>
+              Tutti
             </label>
             <label class="btn btn-sm {% if appt == 'today' %}btn-active{% endif %}">
-                <input type="radio" name="appt" value="today" class="hidden" {% if appt == 'today' %}checked{% endif %}>
-                Oggi
+              <input type="radio" name="appt" value="today" class="hidden" {% if appt == 'today' %}checked{% endif %}>
+              Oggi
             </label>
             <label class="btn btn-sm {% if appt == 'tomorrow' %}btn-active{% endif %}">
-                <input type="radio" name="appt" value="tomorrow" class="hidden" {% if appt == 'tomorrow' %}checked{% endif %}>
-                Domani
+              <input type="radio" name="appt" value="tomorrow" class="hidden" {% if appt == 'tomorrow' %}checked{% endif %}>
+              Domani
             </label>
             <label class="btn btn-sm {% if appt == 'next3' %}btn-active{% endif %}">
-                <input type="radio" name="appt" value="next3" class="hidden" {% if appt == 'next3' %}checked{% endif %}>
-                Prossimi 3 giorni
+              <input type="radio" name="appt" value="next3" class="hidden" {% if appt == 'next3' %}checked{% endif %}>
+              Prossimi 3 giorni
             </label>
             <label class="btn btn-sm {% if appt == 'next7' %}btn-active{% endif %}">
-                <input type="radio" name="appt" value="next7" class="hidden" {% if appt == 'next7' %}checked{% endif %}>
-                Prossimi 7 giorni
+              <input type="radio" name="appt" value="next7" class="hidden" {% if appt == 'next7' %}checked{% endif %}>
+              Prossimi 7 giorni
             </label>
-            {# RIMOSSA 'Settimana prossima' #}
-            </div>
+          </div>
         </div>
-        </div>
-
+      </div>
 
       <div class="flex items-center gap-2 justify-end">
         <button type="submit" class="btn btn-primary">Filtra</button>
@@ -98,11 +125,17 @@
             </th>
             <th>Email</th>
             <th>Telefono</th>
-            <th>Provenienza</th>
-            <th>Consulente</th>
             <th>
-                <a href="{% qurl sort='primo_contatto' page=None %}" class="link link-hover">Primo contatto</a>
-                <span class="sort-raw">▲▼</span>
+              <a href="{% qurl sort='provenienza' page=None %}" class="link link-hover">Provenienza</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
+              <a href="{% qurl sort='consulente' page=None %}" class="link link-hover">Consulente</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
+              <a href="{% qurl sort='primo_contatto' page=None %}" class="link link-hover">Primo contatto</a>
+              <span class="sort-raw">▲▼</span>
             </th>
             <th>
               <a href="{% qurl sort='creato_il' page=None %}" class="link link-hover">Creato</a>
@@ -130,10 +163,12 @@
             <td class="td-nowrap">{{ l.cognome }}</td>
             <td class="td-nowrap">{{ l.email|default:"—" }}</td>
             <td class="td-nowrap">{{ l.telefono|default:"—" }}</td>
-            <td class="td-nowrap">{{ l.provenienza|default:"—" }}</td>
+            <td class="td-nowrap">
+              {{ l.get_provenienza_display|default:"—" }}
+            </td>
             <td class="td-nowrap">{{ l.consulente|default:"—" }}</td>
             <td class="td-nowrap">
-            {% if l.primo_contatto %}{{ l.primo_contatto|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+              {% if l.primo_contatto %}{{ l.primo_contatto|date:"d/m/Y H:i" }}{% else %}—{% endif %}
             </td>
             <td class="td-nowrap">{{ l.creato_il|date:"d/m/Y H:i" }}</td>
             <td class="td-nowrap">
@@ -173,7 +208,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="10" class="text-center text-base-content/60 py-6">Nessun lead trovato.</td>
+            <td colspan="13" class="text-center text-base-content/60 py-6">Nessun lead trovato.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -202,10 +237,13 @@
 
 </div>
 
-<!-- (opzionale) auto-submit per il gruppo appuntamenti -->
+<!-- Auto-submit per quick appt & select nuovi -->
 <script>
   document.querySelectorAll('input[name="appt"]').forEach(r => {
     r.addEventListener('change', () => r.form && r.form.submit());
+  });
+  document.querySelectorAll('select[name="provenienza"], select[name="consulente"]').forEach(s => {
+    s.addEventListener('change', () => s.form && s.form.submit());
   });
 </script>
 {% endblock %}

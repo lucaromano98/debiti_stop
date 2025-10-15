@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 from django.utils.text import slugify
 from django.conf import settings
+from django.contrib.auth import get_user_model 
 import os
 import time
 
@@ -59,6 +60,7 @@ class DocumentoCliente(models.Model):
         ("anagrafici", "Documenti anagrafici"),
         ("pratiche", "Pratiche"),
         ("legali", "Atti legali"),
+        ("visure", "Visure"),
     )
 
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="documenti")
@@ -199,3 +201,44 @@ class Lead(models.Model):
 
     def __str__(self):
         return f"{self.nome} {self.cognome} ({self.get_stato_display()})"
+
+
+
+# NOTIFICHE 
+
+User = get_user_model()
+
+class Notifica(models.Model):
+    class Tipo(models.TextChoices):
+        DOCUMENTO = "documento", "Documento"
+        GENERICA  = "generica",  "Generica"
+
+    tipo = models.CharField(max_length=20, choices=Tipo.choices, default=Tipo.GENERICA)
+
+    # chi ha generato la notifica (opzionale)
+    actor = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notifiche_generate"
+    )
+
+    # collegamenti utili
+    cliente = models.ForeignKey(
+        "crm.Cliente", null=True, blank=True,
+        on_delete=models.CASCADE,
+        related_name="notifiche"
+    )
+    documento = models.ForeignKey(
+        "crm.DocumentoCliente", null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notifiche"
+    )
+
+    testo = models.CharField(max_length=500, blank=True)
+    payload = models.JSONField(blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        base = self.testo or ""
+        return f"[{self.get_tipo_display()}] {base}"

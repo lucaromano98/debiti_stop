@@ -1,7 +1,7 @@
 from django.urls import path, include
 from django.contrib.auth.views import LogoutView
 from django.contrib.auth import views as auth_views
-from .views import CustomLoginView, lead_toggle_no_risposta, lead_toggle_consulenza, lead_toggle_msg,lead_modifica,lead_lista, lead_nuovo, documenti_zip_cliente, dashboard, home_redirect, clienti_tutti, clienti_legali, clienti_attivi, clienti_non_attivi, cliente_nuovo, clienti_dettaglio, cliente_modifica, cliente_elimina, documento_nuovo, documento_elimina, pratica_nuova, pratica_modifica, pratica_elimina
+from .views import CustomLoginView, notifiche_segna_letto,notifiche_segna_tutte_lette,notifiche_lista ,lead_toggle_no_risposta, lead_toggle_consulenza, lead_toggle_msg,lead_modifica,lead_lista, lead_nuovo, documenti_zip_cliente, dashboard, home_redirect, clienti_tutti, clienti_legali, clienti_attivi, clienti_non_attivi, cliente_nuovo, clienti_dettaglio, cliente_modifica, cliente_elimina, documento_nuovo, documento_elimina, pratica_nuova, pratica_modifica, pratica_elimina
 from .views import nota_crea, nota_modifica, nota_elimina
 from rest_framework.routers import DefaultRouter
 from crm.api.views import ClienteViewSet, LeadViewSet
@@ -72,5 +72,10 @@ urlpatterns = [
     path("leads/<int:lead_id>/toggle-consulenza/", lead_toggle_consulenza, name="lead_toggle_consulenza"),
     path("leads/<int:lead_id>/toggle-no-risposta/", lead_toggle_no_risposta, name="lead_toggle_no_risposta"),
     path("leads/<int:lead_id>/toggle-msg/", lead_toggle_msg, name="lead_toggle_msg"),
+
+     # notifiche
+     path("notifiche/<int:notifica_id>/letto/", notifiche_segna_letto, name="notifiche_segna_letto"),
+     path("notifiche/letto/tutte/", notifiche_segna_tutte_lette, name="notifiche_segna_tutte_lette"),
+     path("notifiche/", notifiche_lista, name="notifiche_lista"),
     
 ]

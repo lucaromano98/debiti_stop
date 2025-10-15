@@ -1,44 +1,120 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-        {% extends "crm/base.html" %}
-    {% block content %}
-    <h2>Carica documento — {{ cliente.nome }} {{ cliente.cognome }}</h2>
+{% extends "crm/base.html" %}
 
-    <form method="post" enctype="multipart/form-data">  <!-- enctype OBBLIGATORIO -->
+{% block title %}Carica documento — {{ cliente.nome }} {{ cliente.cognome }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-sm opacity-70">Carica documento — {{ cliente.nome }} {{ cliente.cognome }}</p>
+      <h1 class="text-2xl font-extrabold tracking-tight">Nuovo documento</h1>
+    </div>
+    <a href="{% url 'cliente_dettaglio' cliente.id %}" class="btn btn-ghost">⟵ Torna al dettaglio</a>
+  </div>
+
+  <!-- Card -->
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-error mb-4">
+          <span>Controlla i campi: ci sono errori nel form.</span>
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
-        {% if messages %}
-        <ul>
-            {% for m in messages %}<li>{{ m }}</li>{% endfor %}
-        </ul>
-        {% endif %}
 
-        {% if form.errors %}
-        <div style="color:red">{{ form.errors }}</div>
-        {% endif %}
+        <div class="grid gap-5 md:grid-cols-2">
+          <!-- Categoria -->
+          <div class="form-control md:col-span-2 lg:col-span-2">
+            <label class="label">
+              <span class="label-text font-semibold">Tipologia documento</span>
+            </label>
+            {{ form.categoria }}
+            {% for e in form.categoria.errors %}
+              <p class="text-error text-sm mt-1">{{ e }}</p>
+            {% endfor %}
+          </div>
 
-        <p>
-        <label for="{{ form.categoria.id_for_label }}">Tipologia documento</label><br>
-        {{ form.categoria }}
-        </p>
-        <p>
-        <label for="{{ form.file.id_for_label }}">File</label><br>
-        {{ form.file }}
-        </p>
-        <p>
-        <label for="{{ form.descrizione.id_for_label }}">Descrizione</label><br>
-        {{ form.descrizione }}
-        </p>
-        <button type="submit">Carica</button>
-    </form>
+          <!-- File -->
+          <div class="form-control md:col-span-2">
+            <label class="label">
+              <span class="label-text font-semibold">File</span>
+            </label>
 
-    <p><a href="{% url 'cliente_dettaglio' cliente.id %}">Torna al dettaglio</a></p>
-    {% endblock %}
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- l’input vero viene stilizzato via JS -->
+              {{ form.file }}
+              <button type="button" id="btn-pick"
+                      class="btn btn-primary btn-sm">
+                + Scegli file
+              </button>
+              <span id="file-name" class="text-sm opacity-70">Nessun file selezionato</span>
+            </div>
 
-</body>
-</html>
+            <p class="text-xs opacity-70 mt-1">
+              Formati accettati: PDF / JPG / PNG – max 10 MB.
+            </p>
+            {% for e in form.file.errors %}
+              <p class="text-error text-sm mt-1">{{ e }}</p>
+            {% endfor %}
+          </div>
+
+          <!-- Descrizione -->
+          <div class="form-control md:col-span-2">
+            <label class="label">
+              <span class="label-text font-semibold">Descrizione</span>
+            </label>
+            {{ form.descrizione }}
+            {% for e in form.descrizione.errors %}
+              <p class="text-error text-sm mt-1">{{ e }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Azioni -->
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <a href="{% url 'cliente_dettaglio' cliente.id %}" class="btn btn-ghost">Annulla</a>
+          <button type="submit" class="btn btn-primary">Carica</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Styling & UX senza toccare forms.py -->
+<script>
+  (function () {
+    // Aggancia i campi
+    const sel   = document.getElementById('{{ form.categoria.id_for_label }}') || document.querySelector('[name="{{ form.categoria.name }}"]');
+    const file  = document.getElementById('{{ form.file.id_for_label }}') || document.querySelector('[name="{{ form.file.name }}"]');
+    const descr = document.getElementById('{{ form.descrizione.id_for_label }}') || document.querySelector('[name="{{ form.descrizione.name }}"]');
+
+    if (sel)   sel.className   = 'select select-bordered w-full';
+    if (descr) descr.className = (descr.tagName === 'TEXTAREA')
+                                  ? 'textarea textarea-bordered w-full'
+                                  : 'input input-bordered w-full';
+
+    // File input → aspetto DaisyUI + bottone esterno
+    if (file) {
+      file.className = 'file-input file-input-bordered w-full max-w-xs hidden'; // lo nascondo e uso il pulsante
+      file.setAttribute('accept', '.pdf,.png,.jpg,.jpeg');
+
+      const btn = document.getElementById('btn-pick');
+      const label = document.getElementById('file-name');
+
+      if (btn) btn.addEventListener('click', () => file.click());
+      if (file) {
+        file.addEventListener('change', () => {
+          label.textContent = file.files && file.files.length
+            ? file.files[0].name
+            : 'Nessun file selezionato';
+        });
+      }
+    }
+  })();
+</script>
+{% endblock %}

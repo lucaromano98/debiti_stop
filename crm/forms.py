@@ -1,18 +1,55 @@
 from django import forms
+from django.forms.widgets import ClearableFileInput  
 from .models import Cliente, DocumentoCliente, Pratiche, Nota, Lead, Consulente
+
+
+# ===== Widget per upload multiplo =====
+class MultiFileInput(ClearableFileInput):
+    """Come ClearableFileInput ma consente selezione multipla."""
+    allow_multiple_selected = True
 
 
 # =========================
 # Cliente
 # =========================
 class ClienteForm(forms.ModelForm):
+    visure_files = forms.FileField(
+        required=False,
+        widget=MultiFileInput(attrs={      # <— usa il widget custom
+            "multiple": True,
+            "class": "hidden",             # lo mostri col <label for="id_visure_files">
+            "accept": ".pdf,.png,.jpg,.jpeg",
+            "id": "id_visure_files",
+            "name": "visure_files",
+        }),
+        help_text="PDF/JPG/PNG – puoi selezionare più file",
+    )
+
     class Meta:
         model = Cliente
         fields = [
             "nome", "cognome", "email", "telefono",
-            "residenza", "esperienza_finanziaria", "visure",
+            "residenza", "esperienza_finanziaria",
             "note", "stato",
         ]
+        widgets = {
+            "nome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "cognome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "email": forms.EmailInput(attrs={"class": "input input-bordered w-full"}),
+            "telefono": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "residenza": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 3}),
+            "esperienza_finanziaria": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 3}),
+            "note": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 4}),
+            "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
+        }
+   
+    def clean_visure_files(self):
+        try:
+            files = self.files.getlist("visure_files")
+        except Exception:
+            files = []
+        return files
+
 
 
 # =========================
@@ -79,13 +116,11 @@ class LeadForm(forms.ModelForm):
             "provenienza", "consulente", "primo_contatto",
         ]
         widgets = {
-            # base
             "nome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "cognome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "telefono": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "email": forms.EmailInput(attrs={"class": "input input-bordered w-full"}),
 
-            # stato/fasi
             "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "appuntamento_previsto": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
@@ -100,7 +135,6 @@ class LeadForm(forms.ModelForm):
                 attrs={"rows": 3, "class": "textarea textarea-bordered w-full"}
             ),
 
-            # nuovi
             "provenienza": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "consulente": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "primo_contatto": forms.DateTimeInput(
@@ -111,7 +145,6 @@ class LeadForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Evita KeyError: usa get prima di manipolare il campo
         field = self.fields.get("consulente")
         if field is not None:
             field.queryset = Consulente.objects.filter(is_active=True).order_by("nome")
@@ -125,7 +158,7 @@ class LeadForm(forms.ModelForm):
         if field is not None:
             field.required = False
             field.input_formats = [
-                "%Y-%m-%dT%H:%M",  # HTML5 datetime-local
+                "%Y-%m-%dT%H:%M",
                 "%Y-%m-%d %H:%M",
                 "%d/%m/%Y %H:%M",
             ]
@@ -149,22 +182,7 @@ class LeadForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         stato = cleaned.get("stato")
-        no_risposta = cleaned.get("no_risposta")
-        messaggio_inviato = cleaned.get("messaggio_inviato")
         motivazione_negativa = cleaned.get("motivazione_negativa")
-        appuntamento_previsto = cleaned.get("appuntamento_previsto")
-        richiamare_il = cleaned.get("richiamare_il")
-
-        # Se stato = negativo → motivazione obbligatoria
         if stato == "negativo" and not motivazione_negativa:
             self.add_error("motivazione_negativa", "Inserisci la motivazione per l’esito negativo.")
-
-        # Se no risponde e non marchi messaggio inviato (solo warning potenziale)
-        # if no_risposta and not messaggio_inviato:
-        #     self.add_error("messaggio_inviato", "Spunta 'Messaggio inviato' se il lead non risponde.")
-
-        # Se vuoi forzare agenda operativa in 'in_corso':
-        # if stato == "in_corso" and not appuntamento_previsto and not richiamare_il:
-        #     self.add_error("richiamare_il", "Imposta una data/ora di richiamo o un appuntamento.")
-
         return cleaned

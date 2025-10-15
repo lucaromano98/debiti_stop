@@ -5,6 +5,7 @@ import io, os, zipfile
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q, Exists, OuterRef
 from django.http import HttpResponse, HttpResponseForbidden
@@ -12,23 +13,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import (
-    ClienteForm,
-    DocumentoForm,
-    PraticaForm,
-    NotaForm,
-    LeadForm,
-)
+from .services import converti_lead_in_cliente, notifica_documento_caricato
+from .forms import ClienteForm, DocumentoForm, PraticaForm, NotaForm, LeadForm
 from .models import (
     Cliente,
-    DocumentoCliente,   # rel: documento.cliente -> Cliente
-    Pratiche,           # rel: pratica.cliente -> Cliente
+    DocumentoCliente,
+    Pratiche,
     Nota,
     Lead,
+    Consulente,
+    Notifica,
 )
-# from django_tables2 import RequestConfig
-# from .tables import ClientiTable
-
 
 # ==============================
 # Helpers comuni
@@ -59,7 +54,11 @@ def _back(request, fallback_name="lead_lista"):
 
 # Quick ranges per appuntamenti
 def _appt_range(key: str, base: date | None = None):
-    """Ritorna (start_date, end_date) inclusivi per filtro appuntamenti su 'appuntamento_previsto'."""
+    """
+    Ritorna (start_date, end_date) inclusivi per filtro appuntamenti su 'appuntamento_previsto'.
+    - next3: esclude OGGI → da domani a tra 3 giorni
+    - next7: include OGGI → da oggi ai prossimi 7 giorni
+    """
     d = base or date.today()
     if key == "today":
         return d, d
@@ -67,12 +66,10 @@ def _appt_range(key: str, base: date | None = None):
         t = d + timedelta(days=1)
         return t, t
     if key == "next3":
-        # esclude OGGI → domani fino a tra 3 giorni
         start = d + timedelta(days=1)
         end = d + timedelta(days=3)
         return start, end
     if key == "next7":
-        # include oggi → da oggi ai prossimi 7 giorni
         return d, d + timedelta(days=7)
     return None, None
 
@@ -215,16 +212,41 @@ def clienti_non_attivi(request):
 
 
 # ==============================
+# Helper upload visure
+# ==============================
+def _allega_visure(request, cliente):
+    files = request.FILES.getlist("visure_files")
+    if not files:
+        return 0
+    ok = 0
+    for f in files:
+        doc = DocumentoCliente(cliente=cliente, categoria="visure", file=f,
+                               descrizione=f"Visura: {getattr(f, 'name', '')}")
+        try:
+            doc.full_clean()
+            doc.save()
+            notifica_documento_caricato(request.user, cliente, doc)
+            ok += 1
+        except ValidationError as e:
+            messages.error(request, f"'{getattr(f, 'name', '?')}' non caricato: {e}")
+    if ok:
+        messages.success(request, f"Caricate {ok} visure.")
+    return ok
+
+
+# ==============================
 # Clienti – CRUD
 # ==============================
 @login_required
 @user_passes_test(has_portal_access)
 def cliente_nuovo(request):
     if request.method == "POST":
-        form = ClienteForm(request.POST)
+        form = ClienteForm(request.POST, request.FILES)
         if form.is_valid():
             cliente = form.save()
-            messages.success(request, f"Cliente creato: {cliente.nome} {cliente.cognome}.")
+            # ⬇️ allega eventuali visure caricate dal form
+            _allega_visure(request, cliente)
+            messages.success(request, "Cliente creato.")
             return redirect("clienti_tutti")
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
@@ -246,8 +268,9 @@ def clienti_dettaglio(request, cliente_id):
     docs_anag = cliente.documenti.filter(categoria="anagrafici").order_by("-caricato_il")
     docs_prat = cliente.documenti.filter(categoria="pratiche").order_by("-caricato_il")
     docs_leg = cliente.documenti.filter(categoria="legali").order_by("-caricato_il")
+    docs_visure = cliente.documenti.filter(categoria="visure").order_by("-caricato_il")
     pratiche = cliente.pratiche.all().order_by("-data_creazione")
-    note = cliente.note_entries.all().order_by("-creata_il")  # related_name="note_entries"
+    note = cliente.note_entries.all().order_by("-creata_il")
     nota_form = NotaForm()
     return render(
         request,
@@ -257,6 +280,7 @@ def clienti_dettaglio(request, cliente_id):
             "docs_anag": docs_anag,
             "docs_prat": docs_prat,
             "docs_leg": docs_leg,
+            "docs_visure": docs_visure,
             "pratiche": pratiche,
             "note": note,
             "nota_form": nota_form,
@@ -270,9 +294,11 @@ def clienti_dettaglio(request, cliente_id):
 def cliente_modifica(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     if request.method == "POST":
-        form = ClienteForm(request.POST, instance=cliente)
+        form = ClienteForm(request.POST, request.FILES, instance=cliente)
         if form.is_valid():
-            form.save()
+            cliente = form.save()
+            # ⬇️ allega eventuali nuove visure caricate dal form
+            _allega_visure(request, cliente)
             messages.success(request, "Cliente aggiornato.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
@@ -309,6 +335,7 @@ def documento_nuovo(request, cliente_id):
             doc = form.save(commit=False)
             doc.cliente = cliente
             doc.save()
+            notifica_documento_caricato(actor=request.user, cliente=cliente, documento=doc)
             messages.success(request, "Documento caricato correttamente.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
@@ -410,6 +437,8 @@ def pratica_elimina(request, pratica_id):
 # ==============================
 # Note
 # ==============================
+from django.views.decorators.http import require_http_methods, require_POST
+
 @login_required
 @user_passes_test(has_portal_access)
 @require_POST
@@ -441,7 +470,12 @@ def nota_modifica(request, nota_id):
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = NotaForm(instance=nota)
-    return render(request, "crm/nota_form.html", {"form": form, "cliente": cliente, "nota": nota, "is_edit": True})
+    return render(request, "crm/nota_form.html", {
+        "form": form,
+        "cliente": cliente,
+        "nota": nota,
+        "is_edit": True,
+    })
 
 
 @login_required
@@ -463,37 +497,36 @@ def nota_elimina(request, nota_id):
 @login_required
 @user_passes_test(has_portal_access)
 def lead_lista(request):
-    qs = Lead.objects.filter(is_archiviato=False)
+    qs = Lead.objects.filter(is_archiviato=False).select_related("consulente")
 
+    # --- Filtri esistenti ---
     q = request.GET.get("q", "").strip()
-    stato = request.GET.get("stato", "").strip()  # in_corso/negativo/positivo
+    stato = request.GET.get("stato", "").strip()
     dal_raw = request.GET.get("dal", "").strip()
     al_raw = request.GET.get("al", "").strip()
 
     only_no_risposta = request.GET.get("no_risposta", "") == "1"
     only_msg_inviato = request.GET.get("msg_inviato", "") == "1"
     only_acquisizione = request.GET.get("in_acquisizione", "") == "1"
+    richiamo_da_raw = request.GET.get("richiamo_da", "").strip()
+    richiamo_a_raw = request.GET.get("richiamo_a", "").strip()
 
-    # QUICK FILTER: appuntamenti su 'appuntamento_previsto'
-    appt = request.GET.get("appt", "").strip()
-    start, end = _appt_range(appt)
-    if start and end:
-        qs = qs.filter(appuntamento_previsto__date__gte=start,
-                       appuntamento_previsto__date__lte=end)
-
-    # Filtri liberi su creato_il (li tengo: possono servire)
-    dal = _parse_date(dal_raw)
-    al = _parse_date(al_raw)
+    # --- NUOVI FILTRI ---
+    provenienza = request.GET.get("provenienza", "").strip()   # 'tiktok' | 'meta' | 'google' | 'passaparola'
+    consulente_id = request.GET.get("consulente", "").strip()  # id numerico
 
     if q:
         qs = qs.filter(
-            Q(nome__icontains=q)
-            | Q(cognome__icontains=q)
-            | Q(email__icontains=q)
-            | Q(telefono__icontains=q)
+            Q(nome__icontains=q) |
+            Q(cognome__icontains=q) |
+            Q(email__icontains=q) |
+            Q(telefono__icontains=q)
         )
     if stato in {"in_corso", "negativo", "positivo"}:
         qs = qs.filter(stato=stato)
+
+    dal = _parse_date(dal_raw)
+    al = _parse_date(al_raw)
     if dal:
         qs = qs.filter(creato_il__date__gte=dal)
     if al:
@@ -506,46 +539,67 @@ def lead_lista(request):
     if only_acquisizione:
         qs = qs.filter(in_acquisizione=True)
 
-    # Sort (+ appuntamento_previsto abilitato)
-    sort = request.GET.get("sort", "").strip()
-    allowed = {
-        "nome", "-nome",
-        "cognome", "-cognome",
-        "creato_il", "-creato_il",
-        "appuntamento_previsto", "-appuntamento_previsto",
-        "richiamare_il", "-richiamare_il", "primo_contatto", "-primo_contatto",
-        "provenienza", "-provenienza",
-        "consulente", "-consulente",
+    richiamo_da = _parse_date(richiamo_da_raw)
+    richiamo_a = _parse_date(richiamo_a_raw)
+    if richiamo_da:
+        qs = qs.filter(richiamare_il__date__gte=richiamo_da)
+    if richiamo_a:
+        qs = qs.filter(richiamare_il__date__lte=richiamo_a)
+
+    # Quick filter appuntamenti
+    appt = request.GET.get("appt", "").strip()
+    start, end = _appt_range(appt)
+    if start and end:
+        qs = qs.filter(
+            appuntamento_previsto__date__gte=start,
+            appuntamento_previsto__date__lte=end
+        )
+
+    # Applica nuovi filtri
+    if provenienza in dict(Lead.Provenienza.choices):
+        qs = qs.filter(provenienza=provenienza)
+    if consulente_id.isdigit():
+        qs = qs.filter(consulente_id=int(consulente_id))
+
+    # --- SORT ---
+    sort_raw = request.GET.get("sort", "").strip()
+    sort_map = {
+        "nome": "nome", "-nome": "-nome",
+        "cognome": "cognome", "-cognome": "-cognome",
+        "creato_il": "creato_il", "-creato_il": "-creato_il",
+        "appuntamento_previsto": "appuntamento_previsto", "-appuntamento_previsto": "-appuntamento_previsto",
+        "richiamare_il": "richiamare_il", "-richiamare_il": "-richiamare_il",
+        "primo_contatto": "primo_contatto", "-primo_contatto": "-primo_contatto",
+        "provenienza": "provenienza", "-provenienza": "-provenienza",
+        "consulente": "consulente__nome", "-consulente": "-consulente__nome",
     }
-    if sort not in allowed:
-        sort = "-creato_il"
+    sort = sort_map.get(sort_raw, "-creato_il")
     qs = qs.order_by(sort)
 
     ha_negativi = qs.filter(stato="negativo").exists()
 
+    # --- Paginazione ---
     per_page = _get_per_page(request, 20, 100)
     paginator = Paginator(qs, per_page)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    return render(
-        request,
-        "crm/lead_lista.html",
-        {
-            "leads": page_obj.object_list,
-            "page_obj": page_obj,
-            "q": q,
-            "stato": stato,
-            "dal": dal_raw,
-            "al": al_raw,
-            "no_risposta": "1" if only_no_risposta else "",
-            "msg_inviato": "1" if only_msg_inviato else "",
-            "in_acquisizione": "1" if only_acquisizione else "",
-            "sort": sort,
-            "ha_negativi": ha_negativi,
-            "per": per_page,
-            "appt": appt,  # nuovo quick filter
-        },
-    )
+    consulenti = Consulente.objects.filter(is_active=True).order_by("nome")
+
+    return render(request, "crm/lead_lista.html", {
+        "leads": page_obj.object_list,
+        "page_obj": page_obj,
+        "q": q, "stato": stato, "dal": dal_raw, "al": al_raw,
+        "no_risposta": "1" if only_no_risposta else "",
+        "msg_inviato": "1" if only_msg_inviato else "",
+        "in_acquisizione": "1" if only_acquisizione else "",
+        "richiamo_da": richiamo_da_raw, "richiamo_a": richiamo_a_raw,
+        "sort": sort_raw, "ha_negativi": ha_negativi, "per": per_page,
+        "provenienza": provenienza,
+        "consulente_sel": consulente_id,
+        "consulenti": consulenti,
+        "PROVENIENZA_CHOICES": Lead.Provenienza.choices,
+        "appt": appt,
+    })
 
 
 @login_required
@@ -624,3 +678,34 @@ def lead_toggle_consulenza(request, lead_id):
     lead.consulenza_effettuata = not lead.consulenza_effettuata
     lead.save(update_fields=["consulenza_effettuata"])
     return redirect(_back(request))
+
+# NOTIFICHE
+
+def _go_back(request, fallback="dashboard"):
+    # torna alla pagina precedente o a una fallback url name
+    return redirect(request.POST.get("next") or request.META.get("HTTP_REFERER") or fallback)
+
+
+@require_POST
+@login_required
+def notifiche_segna_letto(request, notifica_id):
+    Notifica.objects.filter(pk=notifica_id).update(is_read=True)
+    messages.success(request, "Notifica segnata come letta.")
+    return _go_back(request)
+
+@require_POST
+@login_required
+def notifiche_segna_tutte_lette(request):
+    Notifica.objects.filter(is_read=False).update(is_read=True)
+    messages.success(request, "Tutte le notifiche segnate come lette.")
+    return _go_back(request)
+
+
+@login_required
+def notifiche_lista(request):
+    """
+    Pagina semplice con tutte le notifiche (opzionale).
+    """
+    qs = Notifica.objects.select_related("cliente", "actor").order_by("-created_at")
+    return render(request, "crm/notifiche_lista.html", {"notifiche": qs})
+

@@ -1,54 +1,160 @@
 {% extends "crm/base.html" %}
-{% block title %}Nuovo cliente · Debiti Stop{% endblock %}
+{% block title %}{% if is_edit %}Modifica cliente · Debiti Stop{% else %}Nuovo cliente · Debiti Stop{% endif %}{% endblock %}
 
 {% block content %}
-  <div class="mx-auto max-w-5xl space-y-6">
-
-    <!-- Header + breadcrumb light -->
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Clienti</p>
-        <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          Nuovo cliente
-        </h1>
-      </div>
-      <a href="{% url 'clienti_tutti' %}" class="btn-ghost">
-        ⟵ Torna alla lista
-      </a>
+<div class="mx-auto max-w-[min(1100px,100%)]">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <p class="text-xs opacity-70 uppercase tracking-wider">Clienti</p>
+      <h1 class="text-2xl font-extrabold">
+        {% if is_edit %}Modifica cliente{% else %}Nuovo cliente{% endif %}
+      </h1>
     </div>
+    <a href="{% url 'clienti_tutti' %}" class="link link-hover text-sm">⟵ Torna alla lista</a>
+  </div>
 
-    <!-- Card del form -->
-    <div class="form-card">
-      <form method="post" class="space-y-6">
+  <!-- Card -->
+  <div class="card bg-base-200/40 shadow-xl border border-base-300">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
 
-        <!-- Grid responsiva: 2 colonne su md+ -->
-        <div class="grid gap-5 md:grid-cols-2">
-          {% for field in form %}
-            <div class="space-y-1.5 md:col-span-1">
-              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {{ field }}
-              {% if field.help_text %}
-                <p class="help-text">{{ field.help_text }}</p>
-              {% endif %}
-              {% if field.errors %}
-                {% for err in field.errors %}
-                  <p class="error-text">{{ err }}</p>
-                {% endfor %}
-              {% endif %}
-            </div>
-          {% endfor %}
+        <!-- Nome / Cognome -->
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Nome</span></div>
+            {{ form.nome }}
+            {% for err in form.nome.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+
+          <label class="form-control">
+            <div class="label"><span class="label-text">Cognome</span></div>
+            {{ form.cognome }}
+            {% for err in form.cognome.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
         </div>
 
-        <!-- Azioni -->
-        <div class="flex items-center justify-end gap-3 pt-2">
-          <a href="{% url 'clienti_tutti' %}" class="btn-ghost">Annulla</a>
-          <button type="submit" class="btn-primary">
-            Salva
+        <!-- Email / Telefono -->
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Email</span></div>
+            {{ form.email }}
+            {% for err in form.email.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+
+          <label class="form-control">
+            <div class="label"><span class="label-text">Telefono</span></div>
+            {{ form.telefono }}
+            {% for err in form.telefono.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+        </div>
+
+        <!-- Residenza / Esperienza finanziaria (forzate altezza tipo input) -->
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="form-control">
+            <div class="label"><span class="label-text">Residenza</span></div>
+            {{ form.residenza }}
+            {% for err in form.residenza.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+
+          <label class="form-control">
+            <div class="label"><span class="label-text">Esperienza finanziaria</span></div>
+            {{ form.esperienza_finanziaria }}
+            {% for err in form.esperienza_finanziaria.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+        </div>
+
+        <!-- Note -->
+        <div>
+          <label class="form-control">
+            <div class="label"><span class="label-text">Note</span></div>
+            {{ form.note }}
+            {% for err in form.note.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+        </div>
+
+        <!-- Stato -->
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="form-control md:col-span-1">
+            <div class="label"><span class="label-text">Stato</span></div>
+            {{ form.stato }}
+            {% for err in form.stato.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+        </div>
+
+        <!-- Allegati Visure -->
+        <div class="space-y-2">
+          <div class="label p-0"><span class="label-text">Allegati · Visure</span></div>
+
+          <!-- input file (verrà nascosto via JS) -->
+          {{ form.visure_files }}
+
+          <!-- bottone stiloso -->
+          <label id="btn_visure"
+                 class="btn btn-primary btn-sm normal-case rounded-full px-4 shadow-md hover:shadow-lg w-fit cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                 d="M12 4v16m8-8H4"/></svg>
+            Aggiungi visure
+          </label>
+
+          <p class="text-xs opacity-70">
+            Formati: PDF / JPG / PNG — puoi selezionare più file.
+          </p>
+
+          <!-- elenco file selezionati -->
+          <ul id="visure_list" class="text-xs mt-1 space-y-0.5"></ul>
+        </div>
+
+        <div class="divider my-0"></div>
+        <div class="flex items-center justify-end gap-3">
+          <a href="{% url 'clienti_tutti' %}" class="btn btn-ghost">Annulla</a>
+          <button type="submit" class="btn btn-primary">
+            {% if is_edit %}Salva modifiche{% else %}Crea cliente{% endif %}
           </button>
         </div>
       </form>
     </div>
-
   </div>
+</div>
+
+<!-- Stile mirato (senza toccare la logica né i widget) -->
+<style>
+  /* Forza RESIDENZA ed ESPERIENZA a sembrare input singola riga */
+  textarea[name="residenza"],
+  textarea[name="esperienza_finanziaria"]{
+    height: 2.75rem;       /* ~h-11 */
+    min-height: 2.75rem;
+    resize: none;
+  }
+  /* Nasconde l'input file se non è già hidden */
+  input[name="visure_files"]{ display:none; }
+</style>
+
+<!-- JS: collega il bottone all'input file + mostra i nomi file -->
+<script>
+  (function () {
+    const fileInput = document.querySelector('input[name="visure_files"]');
+    const btn = document.getElementById('btn_visure');
+    const list = document.getElementById('visure_list');
+    if (!fileInput || !btn) return;
+
+    // se non ha id, assegnalo (utile per compatibilità)
+    if (!fileInput.id) fileInput.id = 'id_visure_files';
+
+    btn.setAttribute('for', fileInput.id);
+    btn.addEventListener('click', function () { fileInput.click(); });
+
+    fileInput.addEventListener('change', function () {
+      list.innerHTML = '';
+      if (!this.files) return;
+      Array.from(this.files).forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = '• ' + f.name;
+        list.appendChild(li);
+      });
+    });
+  })();
+</script>
 {% endblock %}

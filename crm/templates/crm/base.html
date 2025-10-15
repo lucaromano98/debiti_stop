@@ -19,10 +19,10 @@
     })();
   </script>
 
-  <!-- SOLO Tailwind compilato -->
+  <!-- Tailwind compilato -->
   <link href="{% static 'css/app.css' %}?v={% now 'U' %}" rel="stylesheet" />
 
-  <!-- Nascondi sidebar nelle pagine auth (login, reset, ecc.) -->
+  <!-- Nascondi sidebar nelle pagine auth -->
   <style>
     body.auth aside.sidebar{display:none!important;}
     body.auth .content{grid-column:1 / -1;}
@@ -36,7 +36,7 @@
              dark:bg-[#0b1220] dark:text-slate-100
              {% block body_class %}{% endblock %}">
 
-  <!-- Toggle tema: inline onclick a prova di tutto -->
+  <!-- Toggle tema -->
   <button
     type="button"
     data-theme-toggle
@@ -52,180 +52,265 @@
   <!-- Layout: sidebar + contenuto -->
   <div id="layout-root" class="grid min-h-screen grid-cols-[260px_minmax(0,1fr)]">
 
-    
     <!-- Sidebar -->
-      <aside
-        class="sidebar group/sidebar sticky top-0 h-svh overflow-y-auto border-r
-              border-slate-200/60 bg-white/70 backdrop-blur-sm
-              dark:border-white/10 dark:bg-slate-900/60
-              w-[260px] transition-[width] duration-200
-              data-[collapsed=true]:w-[72px]"
-        data-collapsed="false"
-      >
-        <!-- Header logo + toggle -->
-        <div class="flex items-center justify-between gap-2 p-4">
+    <aside
+      class="sidebar group/sidebar sticky top-0 h-svh overflow-y-auto border-r
+             border-slate-200/60 bg-white/70 backdrop-blur-sm
+             dark:border-white/10 dark:bg-slate-900/60
+             w-[260px] transition-[width] duration-200
+             data-[collapsed=true]:w-[72px]"
+      data-collapsed="false"
+    >
+      <!-- Header logo + toggle -->
+      <div class="flex items-center justify-between gap-2 p-4">
+        <div class="flex items-center gap-2">
+          <span class="grid h-9 w-9 place-items-center rounded-lg
+                       bg-gradient-to-br from-blue-500 to-cyan-500 font-extrabold text-white">
+            DS
+          </span>
+          <span class="logo-text text-base font-semibold
+                       group-data-[collapsed=true]/sidebar:hidden">
+            Debiti Stop
+          </span>
+        </div>
+
+        <button type="button" data-toggle-sidebar
+          class="collapse-btn rounded-md border border-slate-300/60 p-1.5 text-slate-600 hover:bg-white
+                 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-800
+                 transition-transform duration-200"
+          aria-label="Comprimi/espandi menu" title="Comprimi/espandi">
+          <svg class="h-[18px] w-[18px] opacity-80
+                      group-data-[collapsed=true]/sidebar:rotate-180 transition-transform duration-200"
+               viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path fill="currentColor" d="M15.41 7.41L14 6l-6 6l6 6l1.41-1.41L10.83 12z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Blocco utente -->
+      <div class="mx-4 mb-3 rounded-xl border border-slate-200/60 bg-white/70 p-3 text-sm
+                  dark:border-white/10 dark:bg-slate-800/60">
+        <div class="flex items-center gap-2">
+          <!-- user icon -->
+          <svg class="w-5 h-5 text-slate-600 dark:text-slate-300" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="10" cy="8" r="4"/>
+          </svg>
+          <span class="truncate group-data-[collapsed=true]/sidebar:hidden">
+            {{ request.user.username }}
+            {% if request.user.profiloutente and request.user.profiloutente.ruolo %}
+              <span class="text-slate-500 dark:text-slate-400">
+                ({{ request.user.profiloutente.ruolo|title }})
+              </span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <!-- 🔔 Notifiche -->
+      <div class="mx-4 mb-3 rounded-xl border border-slate-200/60 bg-white/70 p-3
+                  dark:border-white/10 dark:bg-slate-800/60">
+        <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="grid h-9 w-9 place-items-center rounded-lg
-                        bg-gradient-to-br from-blue-500 to-cyan-500 font-extrabold text-white">
-              DS
-            </span>
-            <span class="logo-text text-base font-semibold
-                        group-data-[collapsed=true]/sidebar:hidden">
-              Debiti Stop
-            </span>
+            <!-- bell icon -->
+            <svg class="w-5 h-5 text-slate-600 dark:text-slate-300" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 8a6 6 0 1 1 12 0v5l2 2H4l2-2z"/>
+              <path d="M9.7 21a2 2 0 0 0 4.6 0"/>
+            </svg>
+            <span class="font-semibold group-data-[collapsed=true]/sidebar:hidden">Notifiche</span>
           </div>
 
-          <button type="button" data-toggle-sidebar
-            class="collapse-btn rounded-md border border-slate-300/60 p-1.5 text-slate-600 hover:bg-white
-                  dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-800
-                  transition-transform duration-200"
-            aria-label="Comprimi/espandi menu" title="Comprimi/espandi">
-            <svg class="collapse-icon h-[18px] w-[18px] opacity-80
-                        group-data-[collapsed=true]/sidebar:rotate-180 transition-transform duration-200"
-                viewBox="0 0 24 24" fill="none">
-              <path fill="currentColor" d="M15.41 7.41L14 6l-6 6l6 6l1.41-1.41L10.83 12z"/>
-            </svg>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-primary badge-sm group-data-[collapsed=true]/sidebar:hidden">
+              {{ notifiche_unread_count|default:0 }}
+            </span>
+            <!-- Apri modale -->
+            <button type="button"
+                    class="btn btn-ghost btn-xs group-data-[collapsed=true]/sidebar:hidden"
+                    data-open-notifiche
+                    aria-label="Apri tutte le notifiche">
+              Vedi tutto
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista notifiche compatta (anteprima) -->
+        <ul class="mt-3 space-y-2 group-data-[collapsed=true]/sidebar:hidden">
+          {% if notifiche_sidebar %}
+            {% for n in notifiche_sidebar|slice:":3" %}
+              <li class="rounded-md border border-slate-200/60 px-3 py-2 text-sm
+                         dark:border-white/10 bg-white/60 dark:bg-slate-900/50">
+                <div class="flex items-start gap-2">
+                  {% if not n.is_read %}
+                    <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"></span>
+                  {% else %}
+                    <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                  {% endif %}
+                  <div class="min-w-0">
+                    <p class="truncate">{{ n.testo }}</p>
+                    <p class="text-xs opacity-60">{{ n.created_at|date:"d/m/Y H:i" }}</p>
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          {% else %}
+            <li class="text-sm opacity-60">Nessuna notifica.</li>
+          {% endif %}
+        </ul>
+
+        <!-- Sidebar collassata: solo badge -->
+        <div class="hidden group-data-[collapsed=true]/sidebar:flex items-center justify-center mt-2">
+          <button type="button" data-open-notifiche class="btn btn-ghost btn-xs">
+            <span class="badge badge-primary badge-sm">{{ notifiche_unread_count|default:0 }}</span>
           </button>
         </div>
+      </div>
+      <!-- /Notifiche -->
 
-        <!-- Blocco utente -->
-        <div class="mx-4 mb-3 rounded-xl border border-slate-200/60 bg-white/70 p-3 text-sm
-                    dark:border-white/10 dark:bg-slate-800/60">
-          <div class="flex items-center gap-2">
-            <span aria-hidden="true">👤</span>
-            <span class="truncate group-data-[collapsed=true]/sidebar:hidden">
-              {{ request.user.username }}
-              {% if request.user.profiloutente and request.user.profiloutente.ruolo %}
-                <span class="text-slate-500 dark:text-slate-400">
-                  ({{ request.user.profiloutente.ruolo|title }})
-                </span>
-              {% endif %}
-            </span>
-          </div>
-        </div>
+      <!-- Nav -->
+      <nav class="relative mx-2 flex flex-col gap-1 pb-4">
+        {% with curr=request.resolver_match.url_name %}
 
-        <!-- Nav -->
-        <nav class="relative mx-2 flex flex-col gap-1 pb-4">
-          {% comment %} Helper per il link attivo {% endcomment %}
-          {% with curr=request.resolver_match.url_name %}
+        <!-- Aggiungi Cliente -->
+        <a href="{% url 'cliente_nuovo' %}"
+          aria-current="{% if curr == 'cliente_nuovo' %}page{% endif %}"
+          class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                  text-slate-700 hover:bg-slate-100
+                  dark:text-slate-200 dark:hover:bg-slate-800
+                  aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                  before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                  before:h-6 before:w-[3px] before:rounded-r
+                  before:opacity-0 aria-[current=page]:before:opacity-100
+                  before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+          <svg class="w-5 h-5 shrink-0 text-slate-600 group-hover/nav:text-slate-900 dark:text-slate-300 dark:group-hover/nav:text-white"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span class="item-label truncate group-data-[collapsed=true]/sidebar:hidden">Aggiungi Cliente</span>
+          <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                       translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                       opacity-0 shadow-lg ring-1 ring-black/10
+                       bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                       group-hover/nav:opacity-100
+                       group-data-[collapsed=false]/sidebar:hidden">
+            Aggiungi Cliente
+          </span>
+        </a>
 
-          <!-- Aggiungi Cliente -->
-          <a href="{% url 'cliente_nuovo' %}"
-            aria-current="{% if curr == 'cliente_nuovo' %}page{% endif %}"
-            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
-                    text-slate-700 hover:bg-slate-100
-                    dark:text-slate-200 dark:hover:bg-slate-800
-                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
-                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
-                    before:h-6 before:w-[3px] before:rounded-r
-                    before:opacity-0 aria-[current=page]:before:opacity-100
-                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
-            <span class="shrink-0">✚</span>
-            <span class="item-label truncate
-                        group-data-[collapsed=true]/sidebar:hidden">Aggiungi Cliente</span>
+        <!-- Possibile Cliente -->
+        <a href="{% url 'lead_nuovo' %}"
+          aria-current="{% if curr == 'lead_nuovo' %}page{% endif %}"
+          class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                  text-slate-700 hover:bg-slate-100
+                  dark:text-slate-200 dark:hover:bg-slate-800
+                  aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                  before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                  before:h-6 before:w-[3px] before:rounded-r
+                  before:opacity-0 aria-[current=page]:before:opacity-100
+                  before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+          <svg class="w-5 h-5 shrink-0 text-slate-600 group-hover/nav:text-slate-900 dark:text-slate-300 dark:group-hover/nav:text-white"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="10" cy="8" r="4"/>
+            <path d="M20 8v6M17 11h6"/>
+          </svg>
+          <span class="item-label truncate group-data-[collapsed=true]/sidebar:hidden">Possibile Cliente</span>
+          <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                       translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                       opacity-0 shadow-lg ring-1 ring-black/10
+                       bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                       group-hover/nav:opacity-100
+                       group-data-[collapsed=false]/sidebar:hidden">
+            Possibile Cliente
+          </span>
+        </a>
 
-            <!-- Tooltip quando collassata -->
-            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
-                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
-                        opacity-0 shadow-lg ring-1 ring-black/10
-                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
-                        group-hover/nav:opacity-100
-                        group-data-[collapsed=false]/sidebar:hidden">
-              Aggiungi Cliente
-            </span>
-          </a>
+        <!-- Tutti i Clienti -->
+        <a href="{% url 'clienti_tutti' %}"
+          aria-current="{% if curr == 'clienti_tutti' %}page{% endif %}"
+          class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                  text-slate-700 hover:bg-slate-100
+                  dark:text-slate-200 dark:hover:bg-slate-800
+                  aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                  before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                  before:h-6 before:w-[3px] before:rounded-r
+                  before:opacity-0 aria-[current=page]:before:opacity-100
+                  before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+          <svg class="w-5 h-5 shrink-0 text-slate-600 group-hover/nav:text-slate-900 dark:text-slate-300 dark:group-hover/nav:text-white"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span class="item-label truncate group-data-[collapsed=true]/sidebar:hidden">Tutti i Clienti</span>
+          <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                       translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                       opacity-0 shadow-lg ring-1 ring-black/10
+                       bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                       group-hover/nav:opacity-100
+                       group-data-[collapsed=false]/sidebar:hidden">
+            Tutti i Clienti
+          </span>
+        </a>
 
-          <!-- Possibile Cliente -->
-          <a href="{% url 'lead_nuovo' %}"
-            aria-current="{% if curr == 'lead_nuovo' %}page{% endif %}"
-            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
-                    text-slate-700 hover:bg-slate-100
-                    dark:text-slate-200 dark:hover:bg-slate-800
-                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
-                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
-                    before:h-6 before:w-[3px] before:rounded-r
-                    before:opacity-0 aria-[current=page]:before:opacity-100
-                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
-            <span class="shrink-0">✚</span>
-            <span class="item-label truncate
-                        group-data-[collapsed=true]/sidebar:hidden">Possibile Cliente</span>
-            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
-                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
-                        opacity-0 shadow-lg ring-1 ring-black/10
-                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
-                        group-hover/nav:opacity-100
-                        group-data-[collapsed=false]/sidebar:hidden">
-              Possibile Cliente
-            </span>
-          </a>
+        <!-- Possibili Clienti -->
+        <a href="{% url 'lead_lista' %}"
+          aria-current="{% if curr == 'lead_lista' %}page{% endif %}"
+          class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
+                  text-slate-700 hover:bg-slate-100
+                  dark:text-slate-200 dark:hover:bg-slate-800
+                  aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
+                  before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
+                  before:h-6 before:w-[3px] before:rounded-r
+                  before:opacity-0 aria-[current=page]:before:opacity-100
+                  before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
+          <svg class="w-5 h-5 shrink-0 text-slate-600 group-hover/nav:text-slate-900 dark:text-slate-300 dark:group-hover/nav:text-white"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="3" width="16" height="18" rx="2"/>
+            <path d="M9 7h6M8 12h8M8 17h8"/>
+          </svg>
+          <span class="item-label truncate group-data-[collapsed=true]/sidebar:hidden">Possibili clienti</span>
+          <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
+                       translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
+                       opacity-0 shadow-lg ring-1 ring-black/10
+                       bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
+                       group-hover/nav:opacity-100
+                       group-data-[collapsed=false]/sidebar:hidden">
+            Possibili clienti
+          </span>
+        </a>
 
-          <!-- Tutti i Clienti -->
-          <a href="{% url 'clienti_tutti' %}"
-            aria-current="{% if curr == 'clienti_tutti' %}page{% endif %}"
-            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
-                    text-slate-700 hover:bg-slate-100
-                    dark:text-slate-200 dark:hover:bg-slate-800
-                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
-                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
-                    before:h-6 before:w-[3px] before:rounded-r
-                    before:opacity-0 aria-[current=page]:before:opacity-100
-                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
-            <span class="shrink-0">👥</span>
-            <span class="item-label truncate
-                        group-data-[collapsed=true]/sidebar:hidden">Tutti i Clienti</span>
-            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
-                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
-                        opacity-0 shadow-lg ring-1 ring-black/10
-                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
-                        group-hover/nav:opacity-100
-                        group-data-[collapsed=false]/sidebar:hidden">
-              Tutti i Clienti
-            </span>
-          </a>
+        <!-- Divider -->
+        <div class="mt-3 border-t border-slate-200/60 dark:border-white/10"></div>
 
-          <!-- Possibili Clienti -->
-          <a href="{% url 'lead_lista' %}"
-            aria-current="{% if curr == 'lead_lista' %}page{% endif %}"
-            class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
-                    text-slate-700 hover:bg-slate-100
-                    dark:text-slate-200 dark:hover:bg-slate-800
-                    aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
-                    before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
-                    before:h-6 before:w-[3px] before:rounded-r
-                    before:opacity-0 aria-[current=page]:before:opacity-100
-                    before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
-            <span class="shrink-0">📋</span>
-            <span class="item-label truncate
-                        group-data-[collapsed=true]/sidebar:hidden">Possibili clienti</span>
-            <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
-                        translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
-                        opacity-0 shadow-lg ring-1 ring-black/10
-                        bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
-                        group-hover/nav:opacity-100
-                        group-data-[collapsed=false]/sidebar:hidden">
-              Possibili clienti
-            </span>
-          </a>
+        <!-- Logout -->
+        <form method="POST" action="{% url 'logout' %}" class="mx-2">
+          {% csrf_token %}
+          <button type="submit"
+            class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300/60
+                   bg-white/80 px-3 py-2 text-slate-800 shadow-sm hover:bg-white
+                   dark:border-white/10 dark:bg-slate-800/70 dark:text-slate-100 dark:hover:bg-slate-800">
+            <svg class="w-5 h-5 shrink-0 text-slate-700 dark:text-slate-200"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <path d="M16 17l5-5-5-5"/>
+              <path d="M21 12H9"/>
+            </svg>
+            <span class="group-data-[collapsed=true]/sidebar:hidden">Logout</span>
+          </button>
+        </form>
 
-          <!-- Divider -->
-          <div class="mt-3 border-t border-slate-200/60 dark:border-white/10"></div>
-
-          <!-- Logout -->
-          <form method="POST" action="{% url 'logout' %}" class="mx-2">
-            {% csrf_token %}
-            <button type="submit"
-              class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300/60
-                    bg-white/80 px-3 py-2 text-slate-800 shadow-sm hover:bg-white
-                    dark:border-white/10 dark:bg-slate-800/70 dark:text-slate-100 dark:hover:bg-slate-800">
-              <span aria-hidden="true">🔒</span>
-              <span class="group-data-[collapsed=true]/sidebar:hidden">Logout</span>
-            </button>
-          </form>
-
-          {% endwith %}
-        </nav>
-      </aside>
-
+        {% endwith %}
+      </nav>
+    </aside>
 
     <!-- Contenuto -->
     <main class="content p-6">
@@ -255,23 +340,100 @@
 
   {% block extra_js %}{% endblock %}
 
-  <!-- Persistenza sidebar (opzionale) -->
+  <!-- Modale Notifiche -->
+  <dialog id="modal-notifiche" class="modal">
+    <div class="modal-box max-w-3xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg">Notifiche</h3>
+        <form method="dialog">
+          <button class="btn btn-sm btn-ghost">✕</button>
+        </form>
+      </div>
+
+      <!-- Azioni -->
+      <div class="mt-2 mb-4 flex items-center justify-between">
+        <div class="text-sm opacity-70">
+          Non lette: <span class="font-medium">{{ notifiche_unread_count|default:0 }}</span>
+        </div>
+        <form method="post" action="{% url 'notifiche_segna_tutte_lette' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button class="btn btn-sm btn-outline" type="submit">Segna tutte come lette</button>
+        </form>
+      </div>
+
+      <!-- Lista -->
+      <div class="space-y-2 max-h-[60vh] overflow-auto pr-1">
+        {% if notifiche_sidebar %}
+          {% for n in notifiche_sidebar %}
+            <div class="rounded-lg border border-base-300/70 p-3 flex items-start gap-3
+                        {% if not n.is_read %}bg-base-200/60{% endif %}">
+              <div class="pt-1">
+                {% if not n.is_read %}
+                  <span class="inline-block h-2 w-2 rounded-full bg-primary"></span>
+                {% else %}
+                  <span class="inline-block h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                {% endif %}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-sm">{{ n.testo }}</div>
+                <div class="text-xs opacity-60 mt-1">{{ n.created_at|date:"d/m/Y H:i" }}</div>
+              </div>
+              <div class="shrink-0">
+                {% url 'notifiche_segna_letto' n.id as url_read %}
+                {% if url_read and not n.is_read %}
+                  <form method="post" action="{% url 'notifiche_segna_letto' n.id %}">
+                  {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  {% if not n.is_read %}
+                    <button class="btn btn-xs btn-ghost" type="submit">Segna letto</button>
+                  {% endif %}
+                </form>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-sm opacity-70">Nessuna notifica.</div>
+        {% endif %}
+      </div>
+
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn">Chiudi</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+
+  <!-- Persistenza sidebar + apertura modale -->
   <script>
     (function () {
       const KEY = 'sidebar-collapsed';
       const aside = document.querySelector('aside.sidebar');
-      if (!aside) return;
+      if (aside) {
+        const saved = localStorage.getItem(KEY) === '1';
+        if (saved) aside.setAttribute('data-collapsed', 'true');
 
-      // stato iniziale
-      const saved = localStorage.getItem(KEY) === '1';
-      if (saved) aside.setAttribute('data-collapsed', 'true');
+        document.addEventListener('click', function (e) {
+          const btn = e.target.closest('[data-toggle-sidebar]');
+          if (!btn) return;
+          const isCollapsed = aside.getAttribute('data-collapsed') === 'true';
+          aside.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
+          try { localStorage.setItem(KEY, !isCollapsed ? '1' : '0'); } catch {}
+        });
+      }
 
+      // Notifiche: apri modale
+      const modal = document.getElementById('modal-notifiche');
       document.addEventListener('click', function (e) {
-        const btn = e.target.closest('[data-toggle-sidebar]');
-        if (!btn) return;
-        const isCollapsed = aside.getAttribute('data-collapsed') === 'true';
-        aside.setAttribute('data-collapsed', isCollapsed ? 'false' : 'true');
-        try { localStorage.setItem(KEY, !isCollapsed ? '1' : '0'); } catch {}
+        const openBtn = e.target.closest('[data-open-notifiche]');
+        if (openBtn && modal && modal.showModal) {
+          modal.showModal();
+        }
       });
     })();
   </script>

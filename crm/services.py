@@ -1,55 +1,85 @@
 # crm/services.py
+from __future__ import annotations
 from django.db import transaction
 from django.utils import timezone
+from django.utils.text import capfirst
+import os
+from .models import Cliente, Lead, Notifica
 
-def converti_lead_in_cliente(lead, user):
+@transaction.atomic
+def converti_lead_in_cliente(lead: Lead, user=None) -> Cliente:
     """
-    Converte un Lead in Cliente in modo idempotente e tracciato:
-    - Se esiste già un Cliente (email o telefono), lo riutilizza.
-    - Se non esiste, lo crea.
-    - Trasferisce eventuali note_operatori come Nota del Cliente (se hai il modello Nota).
-    - Marca il lead come convertito e archiviato, con chi/quando/cliente di destinazione.
-    Ritorna il Cliente.
+    Converte un Lead in Cliente (idempotente):
+    - se trova un Cliente con stessa email o telefono, riusa quello
+    - altrimenti ne crea uno nuovo
+    - collega il lead al cliente e marca il lead come convertito
     """
-    from .models import Cliente, Nota  # import locale per evitare cicli
+    if not isinstance(lead, Lead):
+        raise TypeError("lead deve essere un'istanza di Lead")
 
-    with transaction.atomic():
-        # 1) Trova o crea cliente
-        cliente = None
-        if lead.email:
-            cliente = Cliente.objects.filter(email__iexact=lead.email).first()
-        if not cliente and lead.telefono:
-            cliente = Cliente.objects.filter(telefono=lead.telefono).first()
+    # 1) dedup semplice: email o telefono
+    cliente = None
+    if lead.email:
+        cliente = Cliente.objects.filter(email__iexact=lead.email).order_by("id").first()
+    if not cliente and lead.telefono:
+        cliente = Cliente.objects.filter(telefono=lead.telefono).order_by("id").first()
 
-        if not cliente:
-            cliente = Cliente.objects.create(
-                nome=lead.nome,
-                cognome=lead.cognome,
-                email=lead.email,
-                telefono=lead.telefono,
-                stato="active",
-                note=lead.note_operatori or "",
-            )
+    # 2) crea se non trovato
+    if not cliente:
+        cliente = Cliente.objects.create(
+            nome=lead.nome or "",
+            cognome=lead.cognome or "",
+            email=lead.email or None,
+            telefono=lead.telefono or None,
+            stato="active",  # oppure "inactive" se preferisci
+        )
 
-        # 2) Porta le note del lead come Nota cliente (opzionale ma utile)
-        if lead.note_operatori:
-            Nota.objects.create(
-                cliente=cliente,
-                autore_nome=user.get_username(),
-                testo=f"[Da LEAD] {lead.note_operatori}",
-            )
+    # 3) marca lead come convertito e collega
+    lead.convertito = True
+    lead.convertito_il = timezone.now()
+    lead.convertito_da = user if user and getattr(user, "is_authenticated", False) else None
+    lead.convertito_cliente = cliente
+    lead.stato = "positivo"
+    lead.save(update_fields=["convertito", "convertito_il", "convertito_da", "convertito_cliente", "stato"])
 
-        # 3) Marca il lead come convertito/archiviato (no delete fisica)
-        lead.convertito = True
-        lead.convertito_il = timezone.now()
-        lead.convertito_da = user
-        lead.convertito_cliente = cliente
-        lead.is_archiviato = True
-        lead.stato = "positivo"
-        lead.save(update_fields=[
-            "convertito", "convertito_il", "convertito_da",
-            "convertito_cliente", "is_archiviato", "stato"
-        ])
+    return cliente
 
-        return cliente
+def notifica_documento_caricato(*, actor, cliente, documento):
+    """
+    Crea una notifica quando viene caricato un documento.
+    - `actor`: User che ha caricato
+    - `cliente`: Cliente destinatario
+    - `documento`: istanza di DocumentoCliente appena salvata
+    """
+    # Label "umana" della categoria (usa choices se disponibili)
+    if hasattr(documento, "get_categoria_display"):
+        categoria_label = documento.get_categoria_display()
+    else:
+        categoria_label = capfirst(str(getattr(documento, "categoria", "")))
 
+    # Nome leggibile del file/documento
+    doc_name = (
+        getattr(documento, "descrizione", None)
+        or (os.path.basename(documento.file.name) if getattr(documento, "file", None) else "Documento")
+    )
+
+    # Nome dell’utente che ha caricato
+    actor_name = (getattr(actor, "get_full_name", lambda: "")() or getattr(actor, "username", "Utente"))
+
+    testo = f"{actor_name} ha aggiunto un documento in {categoria_label} al cliente: {cliente.nome} {cliente.cognome} ({doc_name})."
+
+    # Se hai l’enum Notifica.Tipo, usa quello; altrimenti metti la stringa "documento"
+    tipo_val = getattr(getattr(Notifica, "Tipo", None), "DOCUMENTO", "documento")
+
+    Notifica.objects.create(
+        tipo=tipo_val,
+        cliente=cliente,
+        actor=actor,
+        testo=testo,
+        payload={
+            "doc_id": documento.id,
+            "categoria": getattr(documento, "categoria", None),
+            "documento_nome": doc_name,
+            "cliente_id": cliente.id,
+        },
+    )
