@@ -1,0 +1,79 @@
+{% extends "crm/base.html" %}
+{% block title %}Nuova scheda di consulenza{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+
+  <div class="flex items-end justify-between">
+    <div>
+      <p class="text-sm opacity-60">
+        {% if cliente %}Cliente: {{ cliente.nome }} {{ cliente.cognome }}
+        {% elif lead %}Lead: {{ lead.nome }} {{ lead.cognome }}
+        {% endif %}
+      </p>
+      <h1 class="text-2xl font-extrabold tracking-tight">Scheda di consulenza</h1>
+    </div>
+    <a class="btn btn-ghost" href="{% if cliente %}{% url 'cliente_dettaglio' cliente.id %}{% elif lead %}{% url 'lead_dettaglio' lead.id %}{% else %}{% url 'dashboard' %}{% endif %}">⬅️ Indietro</a>
+  </div>
+
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <label class="form-control">
+            <span class="label-text">Obiettivo</span>
+            {{ form.obiettivo }}
+            {% for e in form.obiettivo.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+          </label>
+          <label class="form-control">
+            <span class="label-text">Occupazione</span>
+            {{ form.occupazione }}
+            {% for e in form.occupazione.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+          </label>
+
+          <label class="form-control">
+            <span class="label-text">Reddito mensile</span>
+            {{ form.reddito_mensile }}
+            {% for e in form.reddito_mensile.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+          </label>
+          <label class="form-control">
+            <span class="label-text">Spese mensili</span>
+            {{ form.spese_mensili }}
+            {% for e in form.spese_mensili.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+          </label>
+
+          <label class="form-control md:col-span-2">
+            <span class="label-text">Esposizione totale</span>
+            {{ form.esposizione_totale }}
+            {% for e in form.esposizione_totale.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+          </label>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <label class="label cursor-pointer justify-start gap-3">
+            {{ form.ha_cqs }} <span class="label-text">Cessione del quinto</span>
+          </label>
+          <label class="label cursor-pointer justify-start gap-3">
+            {{ form.ha_equitalia }} <span class="label-text">Equitalia/AER</span>
+          </label>
+        </div>
+
+        <label class="form-control">
+          <span class="label-text">Note</span>
+          {{ form.note }}
+          {% for e in form.note.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <a class="btn btn-ghost" href="{% if cliente %}{% url 'cliente_dettaglio' cliente.id %}{% elif lead %}{% url 'lead_dettaglio' lead.id %}{% else %}{% url 'dashboard' %}{% endif %}">Annulla</a>
+          <button class="btn btn-primary" type="submit">Salva</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

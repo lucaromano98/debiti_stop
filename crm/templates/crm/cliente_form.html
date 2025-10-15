@@ -114,6 +114,23 @@
             {% if is_edit %}Salva modifiche{% else %}Crea cliente{% endif %}
           </button>
         </div>
+        <!-- gruppo istanza -->
+          <div class="rounded-lg border border-base-300 p-4 space-y-3">
+            <label class="label cursor-pointer justify-start gap-3">
+              {{ form.istanza_visibilita }} <span class="label-text font-medium">Istanza di visibilità</span>
+            </label>
+
+            <div id="istanza-extra" class="grid gap-4 md:grid-cols-2 hidden">
+              <label class="label cursor-pointer justify-start gap-3">
+                {{ form.documenti_inviati }} <span class="label-text">Documenti inviati</span>
+              </label>
+              <label class="label cursor-pointer justify-start gap-3">
+                {{ form.perizia_inviata }} <span class="label-text">Perizia inviata</span>
+              </label>
+              <p class="text-xs opacity-70 md:col-span-2">Se “Perizia inviata” è attivo, il cliente verrà marcato come <strong>Attivo</strong> al salvataggio.</p>
+            </div>
+          </div>
+
       </form>
     </div>
   </div>
@@ -155,6 +172,18 @@
         list.appendChild(li);
       });
     });
+  })();
+</script>
+
+<!-- JS per pulsante di instanza -->
+<script>
+  (function () {
+    const chk = document.getElementById("id_istanza_visibilita");
+    const extra = document.getElementById("istanza-extra");
+    if (!chk || !extra) return;
+    function sync(){ extra.classList.toggle("hidden", !chk.checked); }
+    chk.addEventListener("change", sync);
+    sync();
   })();
 </script>
 {% endblock %}

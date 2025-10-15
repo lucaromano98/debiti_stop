@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .services import converti_lead_in_cliente, notifica_documento_caricato
-from .forms import ClienteForm, DocumentoForm, PraticaForm, NotaForm, LeadForm
+from .forms import ClienteForm, DocumentoForm, PraticaForm, NotaForm, LeadForm, SchedaConsulenzaForm
 from .models import (
     Cliente,
     DocumentoCliente,
@@ -23,6 +23,7 @@ from .models import (
     Lead,
     Consulente,
     Notifica,
+    SchedaConsulenza
 )
 
 # ==============================
@@ -244,7 +245,10 @@ def cliente_nuovo(request):
         form = ClienteForm(request.POST, request.FILES)
         if form.is_valid():
             cliente = form.save()
-            # ⬇️ allega eventuali visure caricate dal form
+            # se perizia inviata -> attivo
+            if cliente.perizia_inviata and cliente.stato != "active":
+                cliente.stato = "active"
+                cliente.save(update_fields=["stato"])
             _allega_visure(request, cliente)
             messages.success(request, "Cliente creato.")
             return redirect("clienti_tutti")
@@ -270,6 +274,7 @@ def clienti_dettaglio(request, cliente_id):
     docs_leg = cliente.documenti.filter(categoria="legali").order_by("-caricato_il")
     docs_visure = cliente.documenti.filter(categoria="visure").order_by("-caricato_il")
     pratiche = cliente.pratiche.all().order_by("-data_creazione")
+    schede = SchedaConsulenza.objects.filter(cliente=cliente).select_related("compilata_da").order_by("-created_at")
     note = cliente.note_entries.all().order_by("-creata_il")
     nota_form = NotaForm()
     return render(
@@ -284,6 +289,7 @@ def clienti_dettaglio(request, cliente_id):
             "pratiche": pratiche,
             "note": note,
             "nota_form": nota_form,
+            "schede": schede,
         },
     )
 
@@ -297,7 +303,9 @@ def cliente_modifica(request, cliente_id):
         form = ClienteForm(request.POST, request.FILES, instance=cliente)
         if form.is_valid():
             cliente = form.save()
-            # ⬇️ allega eventuali nuove visure caricate dal form
+            if cliente.perizia_inviata and cliente.stato != "active":
+                cliente.stato = "active"
+                cliente.save(update_fields=["stato"])
             _allega_visure(request, cliente)
             messages.success(request, "Cliente aggiornato.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
@@ -642,6 +650,49 @@ def lead_modifica(request, lead_id):
         form = LeadForm(instance=lead)
     return render(request, "crm/lead_form.html", {"form": form, "lead": lead, "is_edit": True})
 
+# Scheda Lead
+
+@login_required
+@user_passes_test(has_portal_access)
+def lead_dettaglio(request, lead_id):
+    lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
+    schede = SchedaConsulenza.objects.filter(lead=lead).select_related("compilata_da").order_by("-created_at")
+    return render(request, "crm/lead_dettaglio.html", {
+        "lead": lead,
+        "schede_consulenza": schede,  # per lista schede del lead
+    })
+
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_http_methods(["GET", "POST"])
+def scheda_consulenza_nuova(request, *, cliente_id=None, lead_id=None):
+    cliente = get_object_or_404(Cliente, pk=cliente_id) if cliente_id else None
+    lead = get_object_or_404(Lead, pk=lead_id) if lead_id else None
+
+    if request.method == "POST":
+        form = SchedaConsulenzaForm(request.POST)
+        if form.is_valid():
+            s = form.save(commit=False)
+            s.cliente = cliente
+            s.lead = lead
+            s.compilata_da = request.user
+            s.save()
+            messages.success(request, "Scheda di consulenza salvata.")
+            if cliente:
+                return redirect("cliente_dettaglio", cliente_id=cliente.id)
+            if lead:
+                return redirect("lead_dettaglio", lead_id=lead.id)
+            return redirect("dashboard")
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
+    else:
+        form = SchedaConsulenzaForm()
+
+    return render(
+        request,
+        "crm/scheda_consulenza_form.html",
+        {"form": form, "cliente": cliente, "lead": lead}
+    )
 
 # ==============================
 # Lead toggles (POST only)

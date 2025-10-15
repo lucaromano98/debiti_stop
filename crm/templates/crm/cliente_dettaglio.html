@@ -56,6 +56,9 @@
           <div class="flex items-center gap-2">
             <a class="btn btn-ghost btn-sm" href="{% url 'documento_nuovo' cliente.id %}">+ Carica documento</a>
             <a class="btn btn-outline btn-sm" href="{% url 'documenti_zip_cliente' cliente.id %}">📦 Scarica tutti (ZIP)</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'scheda_consulenza_nuova_cliente' cliente.id %}">
+              📝 Nuova scheda consulenza
+            </a>
           </div>
         </div>
 
@@ -227,6 +230,46 @@
       </div>
     </div>
   </section>
+
+  <!-- SCHEDE DI CONSULENZA -->
+  <section>
+  <div class="card bg-base-100 shadow">
+    <div class="card-body gap-4">
+      <div class="flex items-center justify-between">
+        <h2 class="card-title">Schede di consulenza</h2>
+        <a class="btn btn-primary btn-sm"
+           href="{% url 'scheda_consulenza_nuova_per_cliente' cliente.id %}">
+          Compila scheda
+        </a>
+      </div>
+
+      {% if schede_consulenza %}
+        <ul class="menu gap-2">
+          {% for s in schede_consulenza %}
+            <li class="flex items-start justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+              <div class="min-w-0">
+                <div class="font-medium">
+                  Compilata da {{ s.compilata_da|default:"—" }}
+                  <span class="opacity-60">— {{ s.created_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                <!-- Mostra 1-2 campi chiave della scheda -->
+                <div class="text-sm opacity-80 truncate">
+                  {% if s.oggetto %}Oggetto: {{ s.oggetto }} · {% endif %}
+                  {% if s.situazione_attuale %}Situazione: {{ s.situazione_attuale|truncatechars:80 }}{% endif %}
+                </div>
+              </div>
+              <!-- placeholder per “Vedi/Modifica” quando creerai le view -->
+              <!-- <a href="{% url 'scheda_consulenza_dettaglio' s.id %}" class="btn btn-ghost btn-xs">Apri</a> -->
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-sm opacity-70">Nessuna scheda compilata.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
 
 </div>
 

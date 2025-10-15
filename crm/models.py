@@ -27,6 +27,7 @@ class Cliente(models.Model):
         ("active", "Attivo"),
         ("inactive", "Non Attivo"),
         ("legal", "Legale"),
+        ("istanza"," Istanza di visibilità")
     )
 
     nome = models.CharField(max_length=100)
@@ -39,6 +40,9 @@ class Cliente(models.Model):
     note = models.TextField(blank=True, null=True)
     stato = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active")
     data_creazione = models.DateTimeField(auto_now_add=True)
+    istanza_visibilita = models.BooleanField(default=False, verbose_name="Istanza di visibilità")
+    documenti_inviati  = models.BooleanField(default=False)
+    perizia_inviata    = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.nome} {self.cognome}"
@@ -242,3 +246,45 @@ class Notifica(models.Model):
     def __str__(self):
         base = self.testo or ""
         return f"[{self.get_tipo_display()}] {base}"
+    
+
+# SCHEDA DI CONSULENZA
+
+class SchedaConsulenza(models.Model):
+    cliente = models.ForeignKey(
+        "Cliente", null=True, blank=True,
+        on_delete=models.CASCADE, related_name="schede_consulenza"
+    )
+    lead = models.ForeignKey(
+        "Lead", null=True, blank=True,
+        on_delete=models.CASCADE, related_name="schede_consulenza"
+    )
+
+    # meta
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    compilata_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="schede_consulenza_compilate"
+    )
+
+    # MVP – campi semplici e chiari (espandibili dopo)
+    obiettivo = models.CharField(max_length=255, blank=True)
+    occupazione = models.CharField(max_length=120, blank=True)
+    reddito_mensile = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    spese_mensili = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    esposizione_totale = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    ha_cqs = models.BooleanField(default=False)            # cessione del quinto
+    ha_equitalia = models.BooleanField(default=False)
+    note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        target = (
+            f"Cliente #{self.cliente_id}" if self.cliente_id
+            else f"Lead #{self.lead_id}" if self.lead_id
+            else "Senza target"
+        )
+        return f"SchedaConsulenza({target})"

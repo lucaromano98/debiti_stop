@@ -2,7 +2,7 @@ from django.urls import path, include
 from django.contrib.auth.views import LogoutView
 from django.contrib.auth import views as auth_views
 from .views import CustomLoginView, notifiche_segna_letto,notifiche_segna_tutte_lette,notifiche_lista ,lead_toggle_no_risposta, lead_toggle_consulenza, lead_toggle_msg,lead_modifica,lead_lista, lead_nuovo, documenti_zip_cliente, dashboard, home_redirect, clienti_tutti, clienti_legali, clienti_attivi, clienti_non_attivi, cliente_nuovo, clienti_dettaglio, cliente_modifica, cliente_elimina, documento_nuovo, documento_elimina, pratica_nuova, pratica_modifica, pratica_elimina
-from .views import nota_crea, nota_modifica, nota_elimina
+from .views import nota_crea, nota_modifica, nota_elimina, lead_dettaglio, scheda_consulenza_nuova
 from rest_framework.routers import DefaultRouter
 from crm.api.views import ClienteViewSet, LeadViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -41,11 +41,17 @@ urlpatterns = [
     path("clienti/<int:cliente_id>/", clienti_dettaglio, name="cliente_dettaglio"),
     path("clienti/<int:cliente_id>/modifica/", cliente_modifica, name="cliente_modifica"),
     path("clienti/<int:cliente_id>/elimina/", cliente_elimina, name="cliente_elimina"),
+    #Scheda consulenza cliente
+    path("clienti/<int:cliente_id>/schede/nuova/", scheda_consulenza_nuova, {"cliente_id": None}, name="scheda_consulenza_nuova_cliente"),
+    path("clienti/<int:cliente_id>/scheda-consulenza/nuova/", scheda_consulenza_nuova, name="scheda_consulenza_nuova_cliente"),
 
     #Leads  
     path("leads/", lead_lista, name="lead_lista"),
     path("leads/nuovo/", lead_nuovo, name="lead_nuovo"),
     path("leads/<int:lead_id>/modifica/", lead_modifica, name="lead_modifica"),
+    path("leads/<int:lead_id>/", lead_dettaglio, name="lead_dettaglio"),
+    #scheda consulenza lead     
+    path("leads/<int:lead_id>/scheda-consulenza/nuova/", scheda_consulenza_nuova, name="scheda_consulenza_nuova_lead"),
 
    
     # Documenti
@@ -78,4 +84,9 @@ urlpatterns = [
      path("notifiche/letto/tutte/", notifiche_segna_tutte_lette, name="notifiche_segna_tutte_lette"),
      path("notifiche/", notifiche_lista, name="notifiche_lista"),
     
+     path("clienti/<int:cliente_id>/consulenza/nuova/",
+          scheda_consulenza_nuova, name="scheda_consulenza_nuova_per_cliente"),
+     path("leads/<int:lead_id>/consulenza/nuova/",
+           scheda_consulenza_nuova, name="scheda_consulenza_nuova_per_lead"),
+
 ]

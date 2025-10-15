@@ -1,6 +1,6 @@
 from django import forms
 from django.forms.widgets import ClearableFileInput  
-from .models import Cliente, DocumentoCliente, Pratiche, Nota, Lead, Consulente
+from .models import Cliente, DocumentoCliente, Pratiche, Nota, Lead, Consulente, SchedaConsulenza
 
 
 # ===== Widget per upload multiplo =====
@@ -31,24 +31,23 @@ class ClienteForm(forms.ModelForm):
             "nome", "cognome", "email", "telefono",
             "residenza", "esperienza_finanziaria",
             "note", "stato",
+            # NEW
+            "istanza_visibilita", "documenti_inviati", "perizia_inviata",
         ]
         widgets = {
             "nome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "cognome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "email": forms.EmailInput(attrs={"class": "input input-bordered w-full"}),
             "telefono": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
-            "residenza": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 3}),
-            "esperienza_finanziaria": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 3}),
+            "residenza": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 1}),
+            "esperienza_finanziaria": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 1}),
             "note": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 4}),
             "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            # NEW
+            "istanza_visibilita": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
+            "documenti_inviati": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
+            "perizia_inviata": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
         }
-   
-    def clean_visure_files(self):
-        try:
-            files = self.files.getlist("visure_files")
-        except Exception:
-            files = []
-        return files
 
 
 
@@ -186,3 +185,26 @@ class LeadForm(forms.ModelForm):
         if stato == "negativo" and not motivazione_negativa:
             self.add_error("motivazione_negativa", "Inserisci la motivazione per l’esito negativo.")
         return cleaned
+
+# ========================
+# SchedaConsulenza
+# ========================
+
+class SchedaConsulenzaForm(forms.ModelForm):
+    class Meta:
+        model = SchedaConsulenza
+        fields = [
+            "obiettivo", "occupazione",
+            "reddito_mensile", "spese_mensili", "esposizione_totale",
+            "ha_cqs", "ha_equitalia", "note",
+        ]
+        widgets = {
+            "obiettivo": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "occupazione": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
+            "reddito_mensile": forms.NumberInput(attrs={"step": "0.01", "class": "input input-bordered w-full"}),
+            "spese_mensili": forms.NumberInput(attrs={"step": "0.01", "class": "input input-bordered w-full"}),
+            "esposizione_totale": forms.NumberInput(attrs={"step": "0.01", "class": "input input-bordered w-full"}),
+            "ha_cqs": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
+            "ha_equitalia": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
+            "note": forms.Textarea(attrs={"rows": 4, "class": "textarea textarea-bordered w-full"}),
+        }
