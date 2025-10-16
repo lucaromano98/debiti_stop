@@ -1,0 +1,127 @@
+{% extends "crm/base.html" %}
+{% block title %}
+  Scheda di consulenza ·
+  {% if s.cliente %}{{ s.cliente.nome }} {{ s.cliente.cognome }}
+  {% elif s.lead %}{{ s.lead.nome }} {{ s.lead.cognome }}
+  {% else %}—{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-6">
+
+  <!-- Header + azioni -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-extrabold tracking-tight">Scheda di consulenza</h1>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'scheda_consulenza_modifica' s.id %}" class="btn btn-ghost btn-sm">Modifica</a>
+
+      {% if request.user.is_superuser or request.user.profiloutente and request.user.profiloutente.ruolo == 'admin' %}
+      <form method="post" action="{% url 'scheda_consulenza_elimina' s.id %}"
+            onsubmit="return confirm('Eliminare definitivamente questa scheda?');">
+        {% csrf_token %}
+        <button class="btn btn-outline btn-sm" type="submit">Elimina</button>
+      </form>
+      {% endif %}
+
+      {% if s.cliente_id %}
+        <a href="{% url 'cliente_dettaglio' s.cliente_id %}" class="btn btn-primary btn-sm">Torna al cliente</a>
+      {% elif s.lead_id %}
+        <a href="{% url 'lead_dettaglio' s.lead_id %}" class="btn btn-primary btn-sm">Torna al lead</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Metadati -->
+  <div class="card bg-base-100 shadow">
+    <div class="card-body grid gap-3">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <span class="font-semibold">Riferimento:</span>
+          {% if s.cliente %} Cliente — {{ s.cliente.nome }} {{ s.cliente.cognome }}
+          {% elif s.lead %} Lead — {{ s.lead.nome }} {{ s.lead.cognome }}
+          {% else %} — {% endif %}
+        </div>
+        <div><span class="font-semibold">Compilata da:</span> {{ s.compilata_da|default:"—" }}</div>
+        <div><span class="font-semibold">Creata il:</span> {{ s.created_at|date:"d/m/Y H:i" }}</div>
+        {% if s.aggiornata_il %}
+          <div><span class="font-semibold">Ultima modifica:</span> {{ s.aggiornata_il|date:"d/m/Y H:i" }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Dati della scheda: tutti i campi del form -->
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <div class="grid gap-4 sm:grid-cols-2">
+
+        <!-- Obiettivo -->
+        <div>
+          <div class="text-xs opacity-60">Obiettivo</div>
+          <div class="mt-1 font-medium">{{ s.obiettivo|default:"—" }}</div>
+        </div>
+
+        <!-- Occupazione -->
+        <div>
+          <div class="text-xs opacity-60">Occupazione</div>
+          <div class="mt-1 font-medium">{{ s.occupazione|default:"—" }}</div>
+        </div>
+
+        <!-- Reddito mensile -->
+        <div>
+          <div class="text-xs opacity-60">Reddito mensile</div>
+          <div class="mt-1 font-medium">
+            {% if s.reddito_mensile is not None %}{{ s.reddito_mensile }} €{% else %}—{% endif %}
+          </div>
+        </div>
+
+        <!-- Spese mensili -->
+        <div>
+          <div class="text-xs opacity-60">Spese mensili</div>
+          <div class="mt-1 font-medium">
+            {% if s.spese_mensili is not None %}{{ s.spese_mensili }} €{% else %}—{% endif %}
+          </div>
+        </div>
+
+        <!-- Esposizione totale -->
+        <div class="sm:col-span-2">
+          <div class="text-xs opacity-60">Esposizione totale</div>
+          <div class="mt-1 font-medium">
+            {% if s.esposizione_totale is not None %}{{ s.esposizione_totale }} €{% else %}—{% endif %}
+          </div>
+        </div>
+
+        <!-- Cessione del quinto -->
+        <div>
+          <div class="text-xs opacity-60">Cessione del quinto</div>
+          <div class="mt-1">
+            <span class="badge {{ s.ha_cqs|yesno:'badge-success, badge-ghost' }}">
+              {{ s.ha_cqs|yesno:"Sì,No" }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Equitalia / AER -->
+        <div>
+          <div class="text-xs opacity-60">Equitalia / AER</div>
+          <div class="mt-1">
+            <span class="badge {{ s.ha_equitalia|yesno:'badge-warning, badge-ghost' }}">
+              {{ s.ha_equitalia|yesno:"Sì,No" }}
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Note -->
+      <div class="mt-4">
+        <div class="text-xs opacity-60">Note</div>
+        <div class="mt-1 whitespace-pre-line">
+          {{ s.note|default:"—" }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -274,7 +274,7 @@ def clienti_dettaglio(request, cliente_id):
     docs_leg = cliente.documenti.filter(categoria="legali").order_by("-caricato_il")
     docs_visure = cliente.documenti.filter(categoria="visure").order_by("-caricato_il")
     pratiche = cliente.pratiche.all().order_by("-data_creazione")
-    schede = SchedaConsulenza.objects.filter(cliente=cliente).select_related("compilata_da").order_by("-created_at")
+    schede_consulenza = SchedaConsulenza.objects.filter(cliente=cliente).order_by("-created_at")
     note = cliente.note_entries.all().order_by("-creata_il")
     nota_form = NotaForm()
     return render(
@@ -289,7 +289,7 @@ def clienti_dettaglio(request, cliente_id):
             "pratiche": pratiche,
             "note": note,
             "nota_form": nota_form,
-            "schede": schede,
+            "schede_consulenza": schede_consulenza,
         },
     )
 
@@ -656,10 +656,10 @@ def lead_modifica(request, lead_id):
 @user_passes_test(has_portal_access)
 def lead_dettaglio(request, lead_id):
     lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
-    schede = SchedaConsulenza.objects.filter(lead=lead).select_related("compilata_da").order_by("-created_at")
+    schede = SchedaConsulenza.objects.filter(lead=lead).order_by("-created_at")
     return render(request, "crm/lead_dettaglio.html", {
         "lead": lead,
-        "schede_consulenza": schede,  # per lista schede del lead
+        "schede_consulenza": schede,
     })
 
 
@@ -674,15 +674,16 @@ def scheda_consulenza_nuova(request, *, cliente_id=None, lead_id=None):
         form = SchedaConsulenzaForm(request.POST)
         if form.is_valid():
             s = form.save(commit=False)
-            s.cliente = cliente
-            s.lead = lead
+            # lega in modo sicuro per id (evita qualsiasi mismatch di FK/istanze)
+            s.cliente_id = cliente_id or None
+            s.lead_id = lead_id or None
             s.compilata_da = request.user
             s.save()
             messages.success(request, "Scheda di consulenza salvata.")
-            if cliente:
-                return redirect("cliente_dettaglio", cliente_id=cliente.id)
-            if lead:
-                return redirect("lead_dettaglio", lead_id=lead.id)
+            if cliente_id:
+                return redirect("cliente_dettaglio", cliente_id=cliente_id)
+            if lead_id:
+                return redirect("lead_dettaglio", lead_id=lead_id)
             return redirect("dashboard")
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
@@ -759,4 +760,63 @@ def notifiche_lista(request):
     """
     qs = Notifica.objects.select_related("cliente", "actor").order_by("-created_at")
     return render(request, "crm/notifiche_lista.html", {"notifiche": qs})
+
+# ==============================
+# Schede di consulenza
+# ==============================
+# --- Schede consulenza: dettaglio / modifica / elimina ---
+
+@login_required
+@user_passes_test(has_portal_access)
+def scheda_consulenza_dettaglio(request, scheda_id: int):
+    scheda = get_object_or_404(SchedaConsulenza, pk=scheda_id)
+    # Passo lo stesso oggetto con più chiavi per compatibilità con il tuo template
+    return render(
+        request,
+        "crm/scheda_consulenza_dettaglio.html",  # <-- usa il tuo template esistente
+        {"scheda": scheda, "object": scheda, "s": scheda}
+    )
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_http_methods(["GET", "POST"])
+def scheda_consulenza_modifica(request, scheda_id: int):
+    scheda = get_object_or_404(SchedaConsulenza, pk=scheda_id)
+    if request.method == "POST":
+        form = SchedaConsulenzaForm(request.POST, instance=scheda)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Scheda di consulenza aggiornata.")
+            # torna alla pagina del cliente/lead se presente
+            if scheda.cliente_id:
+                return redirect("cliente_dettaglio", cliente_id=scheda.cliente_id)
+            if scheda.lead_id:
+                return redirect("lead_dettaglio", lead_id=scheda.lead_id)
+            return redirect("dashboard")
+        messages.error(request, "Controlla i campi: ci sono errori nel form.")
+    else:
+        form = SchedaConsulenzaForm(instance=scheda)
+    return render(request, "crm/scheda_consulenza_form.html", {"form": form, "scheda": scheda, "is_edit": True})
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_http_methods(["GET", "POST"])
+def scheda_consulenza_elimina(request, scheda_id: int):
+    scheda = get_object_or_404(SchedaConsulenza, pk=scheda_id)
+    # Solo admin può eliminare
+    if not (request.user.is_superuser or getattr(getattr(request.user, "profiloutente", None), "ruolo", "") == "admin"):
+        return HttpResponseForbidden("Solo gli admin possono eliminare le schede.")
+    if request.method == "POST":
+        dst = "dashboard"
+        if scheda.cliente_id:
+            dst = ("cliente_dettaglio", {"cliente_id": scheda.cliente_id})
+        elif scheda.lead_id:
+            dst = ("lead_dettaglio", {"lead_id": scheda.lead_id})
+        scheda.delete()
+        messages.success(request, "Scheda di consulenza eliminata.")
+        if isinstance(dst, tuple):
+            name, kwargs = dst
+            return redirect(name, **kwargs)
+        return redirect(dst)
+    return render(request, "crm/scheda_consulenza_conferma_elimina.html", {"scheda": scheda})
 

@@ -56,7 +56,7 @@
           <div class="flex items-center gap-2">
             <a class="btn btn-ghost btn-sm" href="{% url 'documento_nuovo' cliente.id %}">+ Carica documento</a>
             <a class="btn btn-outline btn-sm" href="{% url 'documenti_zip_cliente' cliente.id %}">📦 Scarica tutti (ZIP)</a>
-            <a class="btn btn-primary btn-sm" href="{% url 'scheda_consulenza_nuova_cliente' cliente.id %}">
+            <a class="btn btn-primary btn-sm" href="{% url 'scheda_consulenza_nuova' cliente.id %}">
               📝 Nuova scheda consulenza
             </a>
           </div>
@@ -232,43 +232,57 @@
   </section>
 
   <!-- SCHEDE DI CONSULENZA -->
-  <section>
-  <div class="card bg-base-100 shadow">
-    <div class="card-body gap-4">
-      <div class="flex items-center justify-between">
-        <h2 class="card-title">Schede di consulenza</h2>
-        <a class="btn btn-primary btn-sm"
-           href="{% url 'scheda_consulenza_nuova_per_cliente' cliente.id %}">
-          Compila scheda
-        </a>
-      </div>
+  <section class="mt-6">
+    <div class="card bg-base-100 shadow">
+      <div class="card-body gap-4">
+        <div class="flex items-center justify-between">
+          <h2 class="card-title">Schede di consulenza</h2>
+          <a href="{% url 'scheda_consulenza_nuova' cliente.id %}" class="btn btn-primary btn-sm">
+            Compila scheda
+          </a>
+        </div>
 
-      {% if schede_consulenza %}
-        <ul class="menu gap-2">
-          {% for s in schede_consulenza %}
-            <li class="flex items-start justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
-              <div class="min-w-0">
-                <div class="font-medium">
-                  Compilata da {{ s.compilata_da|default:"—" }}
-                  <span class="opacity-60">— {{ s.created_at|date:"d/m/Y H:i" }}</span>
+        {% with schede=schede_consulenza %}
+        {% if schede %}
+          <ul class="space-y-2">
+            {% for s in schede %}
+              <li class="rounded-lg border border-base-300/60 px-3 py-2">
+                <div class="flex items-center justify-between gap-3">
+                  <!-- link alla scheda -->
+                  <a href="{% url 'scheda_consulenza_dettaglio' s.id %}" class="min-w-0 flex-1">
+                    <div class="font-medium truncate">
+                      Compilata da {{ s.compilata_da|default:"—" }} — {{ s.created_at|date:"d/m/Y H:i" }}
+                    </div>
+                    {% if s.note|default_if_none:'' %}
+                      <div class="text-xs opacity-70 truncate">{{ s.note }}</div>
+                    {% endif %}
+                  </a>
+
+                  <!-- azioni -->
+                  <div class="shrink-0 flex items-center gap-2">
+                    <a href="{% url 'scheda_consulenza_modifica' s.id %}" class="btn btn-ghost btn-xs">Modifica</a>
+
+                    {% if request.user.is_superuser or request.user.profiloutente and request.user.profiloutente.ruolo == 'admin' %}
+                      <form method="post"
+                            action="{% url 'scheda_consulenza_elimina' s.id %}"
+                            onsubmit="return confirm('Eliminare definitivamente questa scheda?');">
+                        {% csrf_token %}
+                        <button class="btn btn-outline btn-xs" type="submit">Elimina</button>
+                      </form>
+                    {% endif %}
+                  </div>
                 </div>
-                <!-- Mostra 1-2 campi chiave della scheda -->
-                <div class="text-sm opacity-80 truncate">
-                  {% if s.oggetto %}Oggetto: {{ s.oggetto }} · {% endif %}
-                  {% if s.situazione_attuale %}Situazione: {{ s.situazione_attuale|truncatechars:80 }}{% endif %}
-                </div>
-              </div>
-              <!-- placeholder per “Vedi/Modifica” quando creerai le view -->
-              <!-- <a href="{% url 'scheda_consulenza_dettaglio' s.id %}" class="btn btn-ghost btn-xs">Apri</a> -->
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div class="text-sm opacity-70">Nessuna scheda compilata.</div>
-      {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-sm opacity-70">Nessuna scheda compilata.</div>
+        {% endif %}
+        {% endwith %}
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+
 
 
 </div>

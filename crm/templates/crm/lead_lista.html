@@ -190,7 +190,8 @@
             </td>
             <td class="td-actions">
               <div class="join">
-                <a href="{% url 'lead_modifica' l.pk %}" class="btn btn-ghost btn-sm join-item">Apri</a>
+                <a href="{% url 'lead_dettaglio' l.pk %}" class="btn btn-ghost btn-sm join-item">Apri</a>
+                <a href="{% url 'lead_modifica' l.pk %}" class="btn btn-outline btn-sm join-item">Modifica</a>
                 <form method="post" action="{% url 'lead_toggle_msg' l.pk %}" class="join-item">
                   {% csrf_token %}
                   <button class="btn btn-outline btn-sm" title="Messaggio inviato">

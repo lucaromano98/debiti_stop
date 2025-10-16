@@ -252,21 +252,20 @@ class Notifica(models.Model):
 
 class SchedaConsulenza(models.Model):
     cliente = models.ForeignKey(
-        "Cliente", null=True, blank=True,
-        on_delete=models.CASCADE, related_name="schede_consulenza"
+        Cliente, null=True, blank=True,
+        on_delete=models.CASCADE,
+        related_name="schede_consulenza"
     )
     lead = models.ForeignKey(
-        "Lead", null=True, blank=True,
-        on_delete=models.CASCADE, related_name="schede_consulenza"
+        Lead, null=True, blank=True,
+        on_delete=models.CASCADE,
+        related_name="schede_consulenza"
     )
-
-    # meta
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     compilata_da = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="schede_consulenza_compilate"
+        on_delete=models.SET_NULL
     )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     # MVP – campi semplici e chiari (espandibili dopo)
     obiettivo = models.CharField(max_length=255, blank=True)
