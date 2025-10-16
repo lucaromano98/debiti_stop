@@ -1,0 +1,15 @@
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Django / build artefacts
+db.sqlite3
+*.sqlite3
+/staticfiles/
+/media/
