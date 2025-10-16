@@ -190,21 +190,42 @@ class LeadForm(forms.ModelForm):
 # SchedaConsulenza
 # ========================
 
+from django import forms
+from .models import SchedaConsulenza
+
 class SchedaConsulenzaForm(forms.ModelForm):
     class Meta:
         model = SchedaConsulenza
         fields = [
-            "obiettivo", "occupazione",
-            "reddito_mensile", "spese_mensili", "esposizione_totale",
-            "ha_cqs", "ha_equitalia", "note",
+            "obiettivo",
+            "occupazione",
+            "esposizione_patrimoniale",   # testo libero
+            "esposizione_finanziaria",    # testo libero (ATTENZIONE alla r)
+            "esposizione_totale",         # il “Preventivo”
+            "ha_cqs",
+            "ha_equitalia",
+            "note",
         ]
+        labels = {
+            "esposizione_patrimoniale": "Esposizione patrimoniale",
+            "esposizione_finanziaria": "Esposizione finanziaria",
+            "esposizione_totale": "Preventivo",
+        }
         widgets = {
             "obiettivo": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "occupazione": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
-            "reddito_mensile": forms.NumberInput(attrs={"step": "0.01", "class": "input input-bordered w-full"}),
-            "spese_mensili": forms.NumberInput(attrs={"step": "0.01", "class": "input input-bordered w-full"}),
-            "esposizione_totale": forms.NumberInput(attrs={"step": "0.01", "class": "input input-bordered w-full"}),
-            "ha_cqs": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
-            "ha_equitalia": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
-            "note": forms.Textarea(attrs={"rows": 4, "class": "textarea textarea-bordered w-full"}),
+
+            "esposizione_patrimoniale": forms.Textarea(attrs={
+                "class": "textarea textarea-bordered w-full",
+                "rows": 4,
+                "placeholder": "Es.\nCasa: valore 30.000\nAuto: valore 5.000",
+            }),
+            "esposizione_finanziaria": forms.Textarea(attrs={
+                "class": "textarea textarea-bordered w-full",
+                "rows": 4,
+                "placeholder": "Es.\nPrestito X: 12.000\nCarta Y: 2.500",
+            }),
+
+            "esposizione_totale": forms.NumberInput(attrs={"class": "input input-bordered w-full"}),
+            "note": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 4}),
         }

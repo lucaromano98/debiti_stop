@@ -270,8 +270,8 @@ class SchedaConsulenza(models.Model):
     # MVP – campi semplici e chiari (espandibili dopo)
     obiettivo = models.CharField(max_length=255, blank=True)
     occupazione = models.CharField(max_length=120, blank=True)
-    reddito_mensile = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    spese_mensili = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    esposizione_patrimoniale = models.TextField(blank=True)
+    esposizione_finanziaria  = models.TextField(blank=True)
     esposizione_totale = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     ha_cqs = models.BooleanField(default=False)            # cessione del quinto
     ha_equitalia = models.BooleanField(default=False)

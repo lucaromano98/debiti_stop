@@ -27,29 +27,39 @@
             {{ form.obiettivo }}
             {% for e in form.obiettivo.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
           </label>
+
           <label class="form-control">
             <span class="label-text">Occupazione</span>
             {{ form.occupazione }}
             {% for e in form.occupazione.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
           </label>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <label class="form-control">
+            <div class="label">
+              <span class="label-text">Esposizione patrimoniale</span>
+              <span class="label-text-alt opacity-70">Una voce per riga</span>
+            </div>
+            {{ form.esposizione_patrimoniale }}
+            {% for e in form.esposizione_patrimoniale.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+          </label>
 
           <label class="form-control">
-            <span class="label-text">Reddito mensile</span>
-            {{ form.reddito_mensile }}
-            {% for e in form.reddito_mensile.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
-          </label>
-          <label class="form-control">
-            <span class="label-text">Spese mensili</span>
-            {{ form.spese_mensili }}
-            {% for e in form.spese_mensili.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
-          </label>
-
-          <label class="form-control md:col-span-2">
-            <span class="label-text">Esposizione totale</span>
-            {{ form.esposizione_totale }}
-            {% for e in form.esposizione_totale.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+            <div class="label">
+              <span class="label-text">Esposizione finanziaria</span>
+              <span class="label-text-alt opacity-70">Una voce per riga</span>
+            </div>
+            {{ form.esposizione_finanziaria }}
+            {% for e in form.esposizione_finanziaria.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
           </label>
         </div>
+
+        <label class="form-control">
+          <span class="label-text">Preventivo</span>
+          {{ form.esposizione_totale }}
+          {% for e in form.esposizione_totale.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+        </label>
 
         <div class="grid gap-5 md:grid-cols-2">
           <label class="label cursor-pointer justify-start gap-3">
