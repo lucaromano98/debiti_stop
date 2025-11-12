@@ -3,6 +3,7 @@
 {% load i18n %}
 {% load l10n %}
 {% load tz %}
+{% load dict_extras %}
 
 {% block title %}{{ cliente.nome }} {{ cliente.cognome }} · Cliente{% endblock %}
 
@@ -46,143 +47,72 @@
     </div>
   </div>
 
-  <!-- DOCUMENTI -->
-  <section class="lg:col-span-2">
-    <div class="card bg-base-100 shadow">
-      <div class="card-body gap-4">
+ <!-- DOCUMENTI -->
+<section class="lg:col-span-2">
+  <div class="card bg-base-100 shadow">
+    <div class="card-body gap-4">
 
-        <div class="flex items-center justify-between">
-          <h2 class="card-title">Documenti</h2>
-          <div class="flex items-center gap-2">
-            <a class="btn btn-ghost btn-sm" href="{% url 'documento_nuovo' cliente.id %}">+ Carica documento</a>
-            <a class="btn btn-outline btn-sm" href="{% url 'documenti_zip_cliente' cliente.id %}">📦 Scarica tutti (ZIP)</a>
-            <a class="btn btn-primary btn-sm" href="{% url 'scheda_consulenza_nuova' cliente.id %}">
-              📝 Nuova scheda consulenza
-            </a>
-          </div>
+      <div class="flex items-center justify-between">
+        <h2 class="card-title">Documenti</h2>
+        <div class="flex items-center gap-2">
+          <form action="{% url 'documento_nuovo' cliente.id %}" method="get" class="inline">
+            <button class="btn btn-ghost btn-sm" type="submit">+ Carica documento</button>
+          </form>
+          <a class="btn btn-outline btn-sm" href="{% url 'documenti_zip_cliente' cliente.id %}">📦 Scarica tutti (ZIP)</a>
+          <a class="btn btn-primary btn-sm" href="{% url 'scheda_consulenza_nuova' cliente.id %}">
+            📝 Nuova scheda consulenza
+          </a>
         </div>
-
-        <!-- Tabs -->
-        <div class="tabs tabs-lifted" role="tablist" id="docs-tabs">
-          <button type="button" role="tab" class="tab tab-active" data-tab="anag">Anagrafici</button>
-          <button type="button" role="tab" class="tab" data-tab="prat">Pratiche</button>
-          <button type="button" role="tab" class="tab" data-tab="leg">Legali</button>
-          <button type="button" role="tab" class="tab" data-tab="visure">Visure</button>
-        </div>
-
-        <div class="rounded-box border border-base-300 p-4">
-          <!-- Pannello: Anagrafici -->
-          <div id="tab-anag" class="tab-panel">
-            {% if docs_anag %}
-              <ul class="menu gap-2">
-                {% for d in docs_anag %}
-                  <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
-                    <div class="min-w-0">
-                      <div class="truncate font-medium">{{ d.descrizione|default:d.file.name }}</div>
-                      <div class="text-xs opacity-70">
-                        ID {{ d.id }} — {{ d.categoria|title }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                      </div>
-                    </div>
-                    <div class="shrink-0 flex items-center gap-2">
-                      <a href="{{ d.file.url }}" class="btn btn-ghost btn-sm">Scarica</a>
-                      <form method="post" action="{% url 'documento_elimina' d.id %}">
-                        {% csrf_token %}
-                        <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
-                      </form>
-                    </div>
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <div class="text-sm opacity-70">Nessun documento anagrafico.</div>
-            {% endif %}
-          </div>
-
-          <!-- Pannello: Pratiche -->
-          <div id="tab-prat" class="tab-panel hidden">
-            {% if docs_prat %}
-              <ul class="menu gap-2">
-                {% for d in docs_prat %}
-                  <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
-                    <div class="min-w-0">
-                      <div class="truncate font-medium">{{ d.descrizione|default:d.file.name }}</div>
-                      <div class="text-xs opacity-70">
-                        ID {{ d.id }} — {{ d.categoria|title }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                      </div>
-                    </div>
-                    <div class="shrink-0 flex items-center gap-2">
-                      <a href="{{ d.file.url }}" class="btn btn-ghost btn-sm">Scarica</a>
-                      <form method="post" action="{% url 'documento_elimina' d.id %}">
-                        {% csrf_token %}
-                        <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
-                      </form>
-                    </div>
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <div class="text-sm opacity-70">Nessun documento pratiche.</div>
-            {% endif %}
-          </div>
-
-          <!-- Pannello: Legali -->
-          <div id="tab-leg" class="tab-panel hidden">
-            {% if docs_leg %}
-              <ul class="menu gap-2">
-                {% for d in docs_leg %}
-                  <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
-                    <div class="min-w-0">
-                      <div class="truncate font-medium">{{ d.descrizione|default:d.file.name }}</div>
-                      <div class="text-xs opacity-70">
-                        ID {{ d.id }} — {{ d.categoria|title }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                      </div>
-                    </div>
-                    <div class="shrink-0 flex items-center gap-2">
-                      <a href="{{ d.file.url }}" class="btn btn-ghost btn-sm">Scarica</a>
-                      <form method="post" action="{% url 'documento_elimina' d.id %}">
-                        {% csrf_token %}
-                        <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
-                      </form>
-                    </div>
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <div class="text-sm opacity-70">Nessun documento legale.</div>
-            {% endif %}
-          </div>
-
-          <!-- Pannello: Visure -->
-          <div id="tab-visure" class="tab-panel hidden">
-            {% if docs_visure %}
-              <ul class="menu gap-2">
-                {% for d in docs_visure %}
-                  <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
-                    <div class="min-w-0">
-                      <div class="truncate font-medium">{{ d.descrizione|default:d.file.name }}</div>
-                      <div class="text-xs opacity-70">
-                        ID {{ d.id }} — {{ d.categoria|title }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                      </div>
-                    </div>
-                    <div class="shrink-0 flex items-center gap-2">
-                      <a href="{{ d.file.url }}" class="btn btn-ghost btn-sm">Scarica</a>
-                      <form method="post" action="{% url 'documento_elimina' d.id %}">
-                        {% csrf_token %}
-                        <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
-                      </form>
-                    </div>
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <div class="text-sm opacity-70">Nessuna visura caricata.</div>
-            {% endif %}
-          </div>
-        </div>
-
       </div>
+
+      {# Tabs dinamiche #}
+      <div class="tabs tabs-lifted" role="tablist" id="docs-tabs">
+        {% for code, label in categories %}
+          <button type="button"
+                  role="tab"
+                  class="tab {% if forloop.first %}tab-active{% endif %}"
+                  data-tab="{{ code }}">
+            {{ label }}
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="rounded-box border border-base-300 p-4">
+        {% for code, label in categories %}
+          <div id="tab-{{ code }}" class="tab-panel {% if not forloop.first %}hidden{% endif %}">
+            {% with docs=docs_by_cat|get_item:code %}
+              {% if docs %}
+                <ul class="menu gap-2">
+                  {% for d in docs %}
+                    <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+                      <div class="min-w-0">
+                        <div class="truncate font-medium">{{ d.descrizione|default:d.file.name }}</div>
+                        <div class="text-xs opacity-70">
+                          ID {{ d.id }} — {{ d.get_categoria_display }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                        </div>
+                      </div>
+                      <div class="shrink-0 flex items-center gap-2">
+                        <a href="{{ d.file.url }}" class="btn btn-ghost btn-sm">Scarica</a>
+                        <form method="post" action="{% url 'documento_elimina' d.id %}">
+                          {% csrf_token %}
+                          <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
+                        </form>
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <div class="text-sm opacity-70">Nessun documento {{ label|lower }}.</div>
+              {% endif %}
+            {% endwith %}
+          </div>
+        {% endfor %}
+      </div>
+
     </div>
-  </section>
+  </div>
+</section>
+
 
   <!-- NOTE -->
   <section>
@@ -287,6 +217,7 @@
 
 </div>
 
+
 <!-- Tabs JS -->
 <script>
   (function () {
@@ -294,12 +225,8 @@
     if (!root) return;
 
     const btns = Array.from(root.querySelectorAll('[data-tab]'));
-    const panels = {
-      anag: document.getElementById('tab-anag'),
-      prat: document.getElementById('tab-prat'),
-      leg:  document.getElementById('tab-leg'),
-      visure: document.getElementById('tab-visure'),
-    };
+    const panels = {};
+    btns.forEach(b => { panels[b.dataset.tab] = document.getElementById('tab-' + b.dataset.tab); });
 
     function activate(key) {
       btns.forEach(b => b.classList.toggle('tab-active', b.dataset.tab === key));
@@ -307,7 +234,7 @@
     }
 
     btns.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
-    activate('anag');
+    // lascia attiva la prima (già marcata nel template)
   })();
 </script>
 {% endblock %}

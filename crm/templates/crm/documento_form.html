@@ -88,7 +88,6 @@
 <!-- Styling & UX senza toccare forms.py -->
 <script>
   (function () {
-    // Aggancia i campi
     const sel   = document.getElementById('{{ form.categoria.id_for_label }}') || document.querySelector('[name="{{ form.categoria.name }}"]');
     const file  = document.getElementById('{{ form.file.id_for_label }}') || document.querySelector('[name="{{ form.file.name }}"]');
     const descr = document.getElementById('{{ form.descrizione.id_for_label }}') || document.querySelector('[name="{{ form.descrizione.name }}"]');
@@ -98,23 +97,31 @@
                                   ? 'textarea textarea-bordered w-full'
                                   : 'input input-bordered w-full';
 
-    // File input → aspetto DaisyUI + bottone esterno
     if (file) {
-      file.className = 'file-input file-input-bordered w-full max-w-xs hidden'; // lo nascondo e uso il pulsante
+      // Nascondo l’input nativo e lo configuro per MULTI upload
+      file.className = 'file-input file-input-bordered w-full max-w-xs hidden';
       file.setAttribute('accept', '.pdf,.png,.jpg,.jpeg');
+      file.setAttribute('multiple', 'multiple');           // <— QUI
+      file.setAttribute('name', 'file');                   // <— assicurati che sia "file"
 
-      const btn = document.getElementById('btn-pick');
+      const btn   = document.getElementById('btn-pick');
       const label = document.getElementById('file-name');
 
       if (btn) btn.addEventListener('click', () => file.click());
-      if (file) {
-        file.addEventListener('change', () => {
-          label.textContent = file.files && file.files.length
-            ? file.files[0].name
-            : 'Nessun file selezionato';
-        });
-      }
+      file.addEventListener('change', () => {
+        if (!file.files || !file.files.length) {
+          label.textContent = 'Nessun file selezionato';
+          return;
+        }
+        if (file.files.length === 1) {
+          label.textContent = file.files[0].name;
+        } else {
+          const names = Array.from(file.files).map(f => f.name).join(', ');
+          label.textContent = `${file.files.length} file selezionati: ${names}`;
+        }
+      });
     }
   })();
 </script>
+
 {% endblock %}

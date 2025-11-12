@@ -50,7 +50,7 @@
           </label>
         </div>
 
-        <!-- Residenza / Esperienza finanziaria (forzate altezza tipo input) -->
+        <!-- Residenza / Esperienza finanziaria -->
         <div class="grid gap-4 md:grid-cols-2">
           <label class="form-control">
             <div class="label"><span class="label-text">Residenza</span></div>
@@ -83,25 +83,37 @@
           </label>
         </div>
 
-        <!-- Allegati Visure -->
+        <!-- Allegati · Visure (multi upload fuori dal form) -->
         <div class="space-y-2">
           <div class="label p-0"><span class="label-text">Allegati · Visure</span></div>
 
-          <!-- input file (verrà nascosto via JS) -->
-          {{ form.visure_files }}
+          <!-- input file stand-alone -->
+          <input type="file"
+                 id="id_visure_files"
+                 name="visure_files"
+                 class="sr-only"
+                 accept=".pdf,.jpg,.jpeg,.png"
+                 multiple>
 
-          <!-- bottone stiloso -->
-          <label id="btn_visure"
+          <!-- bottone che apre il selettore file -->
+          <label for="id_visure_files"
                  class="btn btn-primary btn-sm normal-case rounded-full px-4 shadow-md hover:shadow-lg w-fit cursor-pointer">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
-                 stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                 d="M12 4v16m8-8H4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
             Aggiungi visure
           </label>
 
-          <p class="text-xs opacity-70">
-            Formati: PDF / JPG / PNG — puoi selezionare più file.
-          </p>
+          <p class="text-xs opacity-70">Formati: PDF / JPG / PNG — puoi selezionare più file.</p>
+
+          {# errori non-field (es. validazione file lato view) #}
+          {% if form.non_field_errors %}
+            <ul class="text-error text-sm">
+              {% for err in form.non_field_errors %}
+                <li>• {{ err }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
 
           <!-- elenco file selezionati -->
           <ul id="visure_list" class="text-xs mt-1 space-y-0.5"></ul>
@@ -114,59 +126,55 @@
             {% if is_edit %}Salva modifiche{% else %}Crea cliente{% endif %}
           </button>
         </div>
-        <!-- gruppo istanza -->
-          <div class="rounded-lg border border-base-300 p-4 space-y-3">
-            <label class="label cursor-pointer justify-start gap-3">
-              {{ form.istanza_visibilita }} <span class="label-text font-medium">Istanza di visibilità</span>
-            </label>
 
-            <div id="istanza-extra" class="grid gap-4 md:grid-cols-2 hidden">
-              <label class="label cursor-pointer justify-start gap-3">
-                {{ form.documenti_inviati }} <span class="label-text">Documenti inviati</span>
-              </label>
-              <label class="label cursor-pointer justify-start gap-3">
-                {{ form.perizia_inviata }} <span class="label-text">Perizia inviata</span>
-              </label>
-              <p class="text-xs opacity-70 md:col-span-2">Se “Perizia inviata” è attivo, il cliente verrà marcato come <strong>Attivo</strong> al salvataggio.</p>
-            </div>
+        <!-- Istanza di visibilità -->
+        <div class="rounded-lg border border-base-300 p-4 space-y-3">
+          <label class="label cursor-pointer justify-start gap-3">
+            {{ form.istanza_visibilita }} <span class="label-text font-medium">Istanza di visibilità</span>
+          </label>
+
+          <div id="istanza-extra" class=" gap-4 md:grid-cols-2 hidden">
+            <label class="label cursor-pointer justify-start gap-3">
+              {{ form.documenti_inviati }} <span class="label-text">Documenti inviati</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-3">
+              {{ form.perizia_inviata }} <span class="label-text">Perizia inviata</span>
+            </label>
+            <p class="text-xs opacity-70 md:col-span-2">Se “Perizia inviata” è attivo, il cliente verrà marcato come <strong>Attivo</strong> al salvataggio.</p>
           </div>
+        </div>
 
       </form>
     </div>
   </div>
 </div>
 
-<!-- Stile mirato (senza toccare la logica né i widget) -->
+<!-- Stili mirati -->
 <style>
-  /* Forza RESIDENZA ed ESPERIENZA a sembrare input singola riga */
+  /* Forza RESIDENZA / ESPERIENZA come input a riga singola */
   textarea[name="residenza"],
   textarea[name="esperienza_finanziaria"]{
-    height: 2.75rem;       /* ~h-11 */
+    height: 2.75rem;
     min-height: 2.75rem;
     resize: none;
   }
-  /* Nasconde l'input file se non è già hidden */
-  input[name="visure_files"]{ display:none; }
+  /* Fallback sr-only (se Tailwind non la fornisce) */
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
 </style>
 
-<!-- JS: collega il bottone all'input file + mostra i nomi file -->
+<!-- JS: mostra i nomi dei file selezionati -->
 <script>
   (function () {
-    const fileInput = document.querySelector('input[name="visure_files"]');
-    const btn = document.getElementById('btn_visure');
+    const fileInput = document.getElementById('id_visure_files');
     const list = document.getElementById('visure_list');
-    if (!fileInput || !btn) return;
-
-    // se non ha id, assegnalo (utile per compatibilità)
-    if (!fileInput.id) fileInput.id = 'id_visure_files';
-
-    btn.setAttribute('for', fileInput.id);
-    btn.addEventListener('click', function () { fileInput.click(); });
+    if (!fileInput || !list) return;
 
     fileInput.addEventListener('change', function () {
       list.innerHTML = '';
-      if (!this.files) return;
-      Array.from(this.files).forEach(f => {
+      Array.from(this.files || []).forEach(f => {
         const li = document.createElement('li');
         li.textContent = '• ' + f.name;
         list.appendChild(li);
@@ -175,7 +183,7 @@
   })();
 </script>
 
-<!-- JS per pulsante di instanza -->
+<!-- JS: toggle campi extra istanza -->
 <script>
   (function () {
     const chk = document.getElementById("id_istanza_visibilita");

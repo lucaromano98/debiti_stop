@@ -21,19 +21,15 @@
       <form method="post" class="space-y-5">
         {% csrf_token %}
 
-        <div class="grid gap-5 md:grid-cols-2">
-          <label class="form-control">
-            <span class="label-text">Obiettivo</span>
-            {{ form.obiettivo }}
-            {% for e in form.obiettivo.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
-          </label>
+        
+          
 
           <label class="form-control">
             <span class="label-text">Occupazione</span>
             {{ form.occupazione }}
             {% for e in form.occupazione.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
           </label>
-        </div>
+        
 
         <div class="grid gap-5 md:grid-cols-2">
           <label class="form-control">
@@ -54,6 +50,12 @@
             {% for e in form.esposizione_finanziaria.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
           </label>
         </div>
+
+        <label class="form-control">
+            <span class="label-text">Obiettivo</span>
+            {{ form.obiettivo }}
+            {% for e in form.obiettivo.errors %}<p class="text-error text-xs">{{ e }}</p>{% endfor %}
+          </label>
 
         <label class="form-control">
           <span class="label-text">Preventivo</span>

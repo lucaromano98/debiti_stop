@@ -13,25 +13,12 @@ class MultiFileInput(ClearableFileInput):
 # Cliente
 # =========================
 class ClienteForm(forms.ModelForm):
-    visure_files = forms.FileField(
-        required=False,
-        widget=MultiFileInput(attrs={      # <— usa il widget custom
-            "multiple": True,
-            "class": "hidden",             # lo mostri col <label for="id_visure_files">
-            "accept": ".pdf,.png,.jpg,.jpeg",
-            "id": "id_visure_files",
-            "name": "visure_files",
-        }),
-        help_text="PDF/JPG/PNG – puoi selezionare più file",
-    )
-
     class Meta:
         model = Cliente
         fields = [
             "nome", "cognome", "email", "telefono",
             "residenza", "esperienza_finanziaria",
             "note", "stato",
-            # NEW
             "istanza_visibilita", "documenti_inviati", "perizia_inviata",
         ]
         widgets = {
@@ -43,7 +30,6 @@ class ClienteForm(forms.ModelForm):
             "esperienza_finanziaria": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 1}),
             "note": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 4}),
             "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
-            # NEW
             "istanza_visibilita": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
             "documenti_inviati": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
             "perizia_inviata": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
@@ -59,18 +45,21 @@ class DocumentoForm(forms.ModelForm):
         model = DocumentoCliente
         fields = ["categoria", "file", "descrizione"]
 
-    def clean_file(self):
-        f = self.cleaned_data.get("file")
-        if not f:
-            return f
-        max_mb = 10
-        if f.size > max_mb * 1024 * 1024:
-            raise forms.ValidationError(f"Il file è troppo grande (>{max_mb} MB).")
-        ctype = getattr(f, "content_type", "").lower()
-        allowed = {"application/pdf", "image/png", "image/jpg", "image/jpeg"}
-        if ctype not in allowed and not ctype.startswith("image/jpeg"):
-            raise forms.ValidationError("Formato non valido. Consenti solo PDF, PNG, JPG/JPEG.")
-        return f
+    # chiavi legacy da nascondere
+    EXCLUDE = {"pratiche", "legali"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        field = self.fields["categoria"]
+        # filtra le choices mostrate
+        field.choices = [c for c in field.choices if c[0] not in self.EXCLUDE]
+
+    def clean_categoria(self):
+        v = self.cleaned_data["categoria"]
+        if v in self.EXCLUDE:
+            # protezione lato server in caso di manomissione del form
+            raise forms.ValidationError("Categoria non valida.")
+        return v
 
 
 # =========================
@@ -88,9 +77,16 @@ class PraticaForm(forms.ModelForm):
 class NotaForm(forms.ModelForm):
     class Meta:
         model = Nota
-        fields = ["autore_nome", "testo"]
+        fields = ["testo"]   # <-- niente 'autore_nome' e niente 'autore'
         widgets = {
-            "testo": forms.Textarea(attrs={"rows": 4}),
+            "testo": forms.Textarea(attrs={
+                "class": "textarea textarea-bordered",
+                "rows": 4,
+                "placeholder": "Scrivi una nota...",
+            }),
+        }
+        labels = {
+            "testo": "Nota",
         }
 
 

@@ -13,7 +13,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .services import converti_lead_in_cliente, notifica_documento_caricato
+from .services import converti_lead_in_cliente
+from .services import notifica_documento_caricato as _notify_doc_raw
 from .forms import ClienteForm, DocumentoForm, PraticaForm, NotaForm, LeadForm, SchedaConsulenzaForm
 from .models import (
     Cliente,
@@ -25,6 +26,74 @@ from .models import (
     Notifica,
     SchedaConsulenza
 )
+
+
+
+
+
+def notify_doc(actor, cliente, documento):
+    """Chiama la funzione di servizio provando prima keyword, poi posizionale, poi senza argomenti."""
+    try:
+        return _notify_doc_raw(actor=actor, cliente=cliente, documento=documento)
+    except TypeError:
+        try:
+            return _notify_doc_raw(actor, cliente, documento)
+        except TypeError:
+            try:
+                return _notify_doc_raw()
+            except Exception:
+                return None
+
+
+
+
+# ==============================
+# Helper upload visure (multi-file)
+# ==============================
+def _allega_visure(request, cliente):
+    files = request.FILES.getlist("visure_files")
+    if not files:
+        return 0
+
+    ok = 0
+    docs_ids = []
+    names = []
+
+    for f in files:
+        doc = DocumentoCliente(
+            cliente=cliente,
+            categoria="visure",
+            file=f,
+            descrizione=f"Visura: {getattr(f, 'name', '')}",
+        )
+        try:
+            doc.full_clean()
+            doc.save()
+            ok += 1
+            docs_ids.append(doc.id)
+            names.append(getattr(f, "name", "file"))
+        except ValidationError as e:
+            messages.error(request, f"‘{getattr(f, 'name', '?')}' non caricato: {e.messages[0] if e.messages else e}")
+        except Exception as e:
+            messages.error(request, f"Errore caricando ‘{getattr(f, 'name', '?')}’: {e}")
+
+    if ok:
+        # sottotitolo: primi 3 nomi file (poi "…")
+        preview = ", ".join(names[:3]) + ("…" if len(names) > 3 else "")
+        from .services import notifica_documento_caricato
+        notifica_documento_caricato(
+            actor=request.user,
+            cliente=cliente,
+            documento=doc,
+            count=1,
+            categoria_label=doc.get_categoria_display(),
+            subtitle=(doc.descrizione or ""),
+        )
+        messages.success(request, f"Caricate {ok} visure.")
+    return ok
+
+
+
 
 # ==============================
 # Helpers comuni
@@ -213,39 +282,15 @@ def clienti_non_attivi(request):
 
 
 # ==============================
-# Helper upload visure
-# ==============================
-def _allega_visure(request, cliente):
-    files = request.FILES.getlist("visure_files")
-    if not files:
-        return 0
-    ok = 0
-    for f in files:
-        doc = DocumentoCliente(cliente=cliente, categoria="visure", file=f,
-                               descrizione=f"Visura: {getattr(f, 'name', '')}")
-        try:
-            doc.full_clean()
-            doc.save()
-            notifica_documento_caricato(request.user, cliente, doc)
-            ok += 1
-        except ValidationError as e:
-            messages.error(request, f"'{getattr(f, 'name', '?')}' non caricato: {e}")
-    if ok:
-        messages.success(request, f"Caricate {ok} visure.")
-    return ok
-
-
-# ==============================
 # Clienti – CRUD
 # ==============================
 @login_required
 @user_passes_test(has_portal_access)
 def cliente_nuovo(request):
     if request.method == "POST":
-        form = ClienteForm(request.POST, request.FILES)
+        form = ClienteForm(request.POST)  # il form non ha file fields: request.FILES non serve
         if form.is_valid():
             cliente = form.save()
-            # se perizia inviata -> attivo
             if cliente.perizia_inviata and cliente.stato != "active":
                 cliente.stato = "active"
                 cliente.save(update_fields=["stato"])
@@ -255,13 +300,13 @@ def cliente_nuovo(request):
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = ClienteForm()
-    return render(request, "crm/cliente_form.html", {"form": form})
+    return render(request, "crm/cliente_form.html", {"form": form, "is_edit": False})
 
 
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_possibili(request):
-    clienti = Cliente.objects.filter(stato="possible").order_by("-data_creazione")
+    clienti = Cliente.objects.filter(stato="istanza").order_by("-data_creazione")
     return render(request, "crm/clienti_tutti.html", {"clienti": clienti, "page_obj": None})
 
 
@@ -269,27 +314,42 @@ def clienti_possibili(request):
 @user_passes_test(has_portal_access)
 def clienti_dettaglio(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
-    docs_anag = cliente.documenti.filter(categoria="anagrafici").order_by("-caricato_il")
-    docs_prat = cliente.documenti.filter(categoria="pratiche").order_by("-caricato_il")
-    docs_leg = cliente.documenti.filter(categoria="legali").order_by("-caricato_il")
-    docs_visure = cliente.documenti.filter(categoria="visure").order_by("-caricato_il")
-    pratiche = cliente.pratiche.all().order_by("-data_creazione")
+
+    # Categorie da mostrare (ordine tab)
+    CATS = [
+        (DocumentoCliente.Categoria.ANAGRAFICI,       "Anagrafici"),
+        (DocumentoCliente.Categoria.CONTRATTI,        "Contratti"),
+        (DocumentoCliente.Categoria.VISURE,           "Visure"),
+        (DocumentoCliente.Categoria.RISC_ISTANZA,     "Riscontro istanza"),
+        (DocumentoCliente.Categoria.PROP_TRANSATTIVA, "Proposta transattiva"),
+        (DocumentoCliente.Categoria.DECR_INGIUNTIVO,  "Decreto ingiuntivo"),
+        (DocumentoCliente.Categoria.PRECETTO,         "Precetto"),
+        (DocumentoCliente.Categoria.PIGNORAMENTO,     "Pignoramento"),
+        (DocumentoCliente.Categoria.MANDATO,          "Mandato"),
+    ]
+
+    # Un’unica query e raggruppo in Python
+    docs_by_cat = {code: [] for code, _ in CATS}
+    for d in cliente.documenti.all().order_by("-caricato_il"):
+        if d.categoria in docs_by_cat:
+            docs_by_cat[d.categoria].append(d)
+
+    pratiche = cliente.pratiche.all().order_by("-data_creazione")  # lasciato com’era
     schede_consulenza = SchedaConsulenza.objects.filter(cliente=cliente).order_by("-created_at")
     note = cliente.note_entries.all().order_by("-creata_il")
     nota_form = NotaForm()
+
     return render(
         request,
         "crm/cliente_dettaglio.html",
         {
             "cliente": cliente,
-            "docs_anag": docs_anag,
-            "docs_prat": docs_prat,
-            "docs_leg": docs_leg,
-            "docs_visure": docs_visure,
+            "categories": CATS,         # elenco (code, label)
+            "docs_by_cat": docs_by_cat, # dict code -> lista documenti
             "pratiche": pratiche,
+            "schede_consulenza": schede_consulenza,
             "note": note,
             "nota_form": nota_form,
-            "schede_consulenza": schede_consulenza,
         },
     )
 
@@ -300,7 +360,7 @@ def clienti_dettaglio(request, cliente_id):
 def cliente_modifica(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
     if request.method == "POST":
-        form = ClienteForm(request.POST, request.FILES, instance=cliente)
+        form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             cliente = form.save()
             if cliente.perizia_inviata and cliente.stato != "active":
@@ -337,19 +397,49 @@ def cliente_elimina(request, cliente_id):
 @require_http_methods(["GET", "POST"])
 def documento_nuovo(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
+
     if request.method == "POST":
-        form = DocumentoForm(request.POST, request.FILES)
-        if form.is_valid():
-            doc = form.save(commit=False)
-            doc.cliente = cliente
-            doc.save()
-            notifica_documento_caricato(actor=request.user, cliente=cliente, documento=doc)
-            messages.success(request, "Documento caricato correttamente.")
+        files = request.FILES.getlist("file")  # <- nome del field del form
+        # passa anche request.FILES così il form vede almeno un file
+        form = DocumentoForm(request.POST, request.FILES if files else None)
+
+        if not files:
+            # niente file selezionati
+            form = DocumentoForm(request.POST)
+            form.add_error("file", "Seleziona almeno un file.")
+        if form.is_valid() and files:
+            categoria = form.cleaned_data["categoria"]
+            descr = form.cleaned_data.get("descrizione") or ""
+
+            created = 0
+            for f in files:
+                doc = DocumentoCliente(
+                    cliente=cliente,
+                    categoria=categoria,
+                    descrizione=descr,
+                    file=f,
+                )
+                doc.full_clean()
+                doc.save()
+                try:
+                    # sempre keyword args
+                    notify_doc(
+                        actor=request.user, cliente=cliente, documento=doc
+                    )
+                except Exception:
+                    pass
+                created += 1
+
+            messages.success(request, f"Caricati {created} documento/i.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
-        messages.error(request, "Controlla i campi: ci sono errori nel form.")
-    else:
-        form = DocumentoForm()
+
+        # form non valido → torna al template con gli errori
+        return render(request, "crm/documento_form.html", {"form": form, "cliente": cliente})
+
+    # GET → mostra il form
+    form = DocumentoForm()
     return render(request, "crm/documento_form.html", {"form": form, "cliente": cliente})
+
 
 
 @login_required
@@ -376,9 +466,15 @@ def documenti_zip_cliente(request, cliente_id):
                 continue
             arcname = f"{d.categoria}/{os.path.basename(d.file.name)}"
             try:
+                d.file.open("rb")
                 zf.writestr(arcname, d.file.read())
             except Exception:
                 pass
+            finally:
+                try:
+                    d.file.close()
+                except Exception:
+                    pass
     buffer.seek(0)
     filename = f"documenti_cliente_{cliente.id}.zip"
     resp = HttpResponse(buffer.getvalue(), content_type="application/zip")
@@ -445,7 +541,7 @@ def pratica_elimina(request, pratica_id):
 # ==============================
 # Note
 # ==============================
-from django.views.decorators.http import require_http_methods, require_POST
+
 
 @login_required
 @user_passes_test(has_portal_access)
@@ -456,12 +552,13 @@ def nota_crea(request, cliente_id):
     if form.is_valid():
         nota = form.save(commit=False)
         nota.cliente = cliente
+        # imposta autore (fullname se presente, altrimenti username)
+        nota.autore = (getattr(request.user, "get_full_name", lambda: "")() or "").strip() or request.user.username
         nota.save()
         messages.success(request, "Nota aggiunta.")
     else:
         messages.error(request, "Impossibile salvare la nota.")
     return redirect("cliente_dettaglio", cliente_id=cliente.id)
-
 
 @login_required
 @user_passes_test(has_portal_access)
