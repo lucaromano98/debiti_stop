@@ -13,3 +13,7 @@ db.sqlite3
 *.sqlite3
 /staticfiles/
 /media/
+.env.production
+.env
+.env.*
+!.env.example
