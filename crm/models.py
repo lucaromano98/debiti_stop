@@ -69,7 +69,8 @@ def client_directory_path(instance: "DocumentoCliente", filename: str) -> str:
 class DocumentoCliente(models.Model):
     class Categoria(models.TextChoices):
         ANAGRAFICI        = "anagrafici",          "Documenti anagrafici"
-        CONTRATTI         = "contratti",           "Contratti"
+        SCHED_CON         = "scheda_consulenza",   "Scheda Consulenza"
+        CONTRATTI         = "contratti",           "Stragiudiziario"
         VISURE            = "visure",              "Visure"
         RISC_ISTANZA      = "riscontro_istanza",   "Riscontro istanza"
         PROP_TRANSATTIVA  = "proposta_transattiva","Proposta transattiva"
@@ -77,6 +78,10 @@ class DocumentoCliente(models.Model):
         PRECETTO          = "precetto",            "Precetto"
         PIGNORAMENTO      = "pignoramento",        "Pignoramento"
         MANDATO           = "mandato",             "Mandato"
+        OPPOSIZIONE       = "opposizione",         "Opposizione"
+        PREVENTIVI        = "preventivi",          "Preventivi"
+        ALTRO             = "altro",               "Altro"
+        
 
         # --- legacy per compatibilità con dati già salvati ---
         PRATICHE_LEGACY   = "pratiche",            "LEGACY – Pratiche"

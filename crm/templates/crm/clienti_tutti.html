@@ -71,11 +71,11 @@
           <tr>
             <th class="th-min">#</th>
             <th>
-              <a href="{% qurl sort='nome' page=None %}" class="link link-hover">Nome</a>
+              <a href="{% qurl sort='cognome' page=None %}" class="link link-hover">Cognome</a>
               <span class="sort-raw">▲▼</span>
             </th>
             <th>
-              <a href="{% qurl sort='cognome' page=None %}" class="link link-hover">Cognome</a>
+              <a href="{% qurl sort='nome' page=None %}" class="link link-hover">Nome</a>
               <span class="sort-raw">▲▼</span>
             </th>
             <th>Email</th>
@@ -93,10 +93,13 @@
         </thead>
         <tbody>
           {% for c in clienti %}
-          <tr>
+          <tr
+            data-href="{% url 'cliente_dettaglio' c.pk %}"
+            class="cursor-pointer hover:bg-base-200/10"
+          >
             <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
-            <td class="td-nowrap">{{ c.nome }}</td>
             <td class="td-nowrap">{{ c.cognome }}</td>
+            <td class="td-nowrap">{{ c.nome }}</td>
             <td class="td-nowrap">{{ c.email|default:"—" }}</td>
             <td class="td-nowrap">{{ c.telefono|default:"—" }}</td>
             <td class="td-nowrap">{{ c.residenza|default:"—" }}</td>
@@ -145,4 +148,29 @@
   </div>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const rows = document.querySelectorAll('tbody tr[data-href]');
+
+    rows.forEach(function (row) {
+      row.addEventListener('click', function (event) {
+        // se il click è su un link, bottone o input, lascio fare il comportamento normale
+        if (event.target.closest('a, button, input, select, textarea')) {
+          return;
+        }
+
+        const url = this.getAttribute('data-href');
+        if (url) {
+          // se l'utente tiene premuto CTRL / CMD apriamo in nuova scheda
+          if (event.ctrlKey || event.metaKey) {
+            window.open(url, '_blank');
+          } else {
+            window.location.href = url;
+          }
+        }
+      });
+    });
+  });
+</script>
 {% endblock %}

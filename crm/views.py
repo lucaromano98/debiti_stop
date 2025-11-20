@@ -230,15 +230,28 @@ def clienti_tutti(request):
         qs = qs.annotate(_has_prat=Exists(sub_prat)).filter(_has_prat=True)
 
     # --- SORT ---
-    sort = request.GET.get("sort", "").strip()
-    allowed = {
-        "nome", "-nome",
-        "cognome", "-cognome",
-        "data_creazione", "-data_creazione",
-    }
-    if sort not in allowed:
-        sort = "-data_creazione"
-    qs = qs.order_by(sort)
+    sort = (request.GET.get("sort") or "").strip()
+
+    # default: cognome A-Z
+    if not sort:
+        sort = "cognome"
+
+    if sort == "cognome":
+        qs = qs.order_by("cognome", "nome")
+    elif sort == "-cognome":
+        qs = qs.order_by("-cognome", "-nome")
+    elif sort == "nome":
+        qs = qs.order_by("nome", "cognome")
+    elif sort == "-nome":
+        qs = qs.order_by("-nome", "-cognome")
+    elif sort == "data_creazione":
+        qs = qs.order_by("data_creazione")
+    elif sort == "-data_creazione":
+        qs = qs.order_by("-data_creazione")
+    else:
+        # fallback di sicurezza
+        sort = "cognome"
+        qs = qs.order_by("cognome", "nome")
 
     # --- PAGINAZIONE ---
     per_page = _get_per_page(request, 20, 100)
@@ -258,6 +271,7 @@ def clienti_tutti(request):
         "per": per_page,
     }
     return render(request, "crm/clienti_tutti.html", ctx)
+
 
 
 @login_required
@@ -318,23 +332,65 @@ def clienti_dettaglio(request, cliente_id):
     # Categorie da mostrare (ordine tab)
     CATS = [
         (DocumentoCliente.Categoria.ANAGRAFICI,       "Anagrafici"),
-        (DocumentoCliente.Categoria.CONTRATTI,        "Contratti"),
-        (DocumentoCliente.Categoria.VISURE,           "Visure"),
-        (DocumentoCliente.Categoria.RISC_ISTANZA,     "Riscontro istanza"),
-        (DocumentoCliente.Categoria.PROP_TRANSATTIVA, "Proposta transattiva"),
-        (DocumentoCliente.Categoria.DECR_INGIUNTIVO,  "Decreto ingiuntivo"),
-        (DocumentoCliente.Categoria.PRECETTO,         "Precetto"),
-        (DocumentoCliente.Categoria.PIGNORAMENTO,     "Pignoramento"),
-        (DocumentoCliente.Categoria.MANDATO,          "Mandato"),
+        (DocumentoCliente.Categoria.SCHED_CON,       "Scheda Consulenza"),
+        (DocumentoCliente.Categoria.CONTRATTI,       "Stragiudiziario"),
+        (DocumentoCliente.Categoria.VISURE,          "Visure"),
+        (DocumentoCliente.Categoria.RISC_ISTANZA,    "Riscontro istanza"),
+        (DocumentoCliente.Categoria.PROP_TRANSATTIVA,"Proposta transattiva"),
+        (DocumentoCliente.Categoria.DECR_INGIUNTIVO, "Decreto ingiuntivo"),
+        (DocumentoCliente.Categoria.PRECETTO,        "Precetto"),
+        (DocumentoCliente.Categoria.PIGNORAMENTO,    "Pignoramento"),
+        (DocumentoCliente.Categoria.MANDATO,         "Mandato"),
+        (DocumentoCliente.Categoria.OPPOSIZIONE,     "Opposizione"),
+        (DocumentoCliente.Categoria.PREVENTIVI,      "Preventivi"),
+        (DocumentoCliente.Categoria.ALTRO,           "Altro"),
     ]
 
-    # Un’unica query e raggruppo in Python
+    # 🔎 testo di ricerca
+    doc_query = (request.GET.get("q") or "").strip()
+    q_norm = doc_query.lower().replace(" ", "") if doc_query else ""
+
+    # prendo tutti i documenti del cliente
+    all_docs_qs = cliente.documenti.all().order_by("-caricato_il")
+    all_docs = list(all_docs_qs)
+
+    # filtro in PYTHON così possiamo gestire spazi / trattini / maiuscole
+    if q_norm:
+        filtered = []
+        for d in all_docs:
+            # descrizione (quello che scrive l'utente)
+            desc = (d.descrizione or "").lower()
+
+            # nome file "umano" (simile al pretty_filename del template)
+            path = d.file.name or ""
+            base = os.path.basename(path)                      # 1763_ci-mario-rossi.jpg
+            name, ext = os.path.splitext(base)                 # 1763_ci-mario-rossi , .jpg
+            parts = name.split("_", 1)
+            if len(parts) == 2 and parts[0].isdigit():
+                name = parts[1]                                # ci-mario-rossi
+            name = name.replace("-", " ")                      # ci mario rossi
+            filename_text = f"{name}{ext}".lower()
+
+            # normalizzo togliendo spazi per la ricerca
+            haystack = (desc + " " + filename_text).replace(" ", "")
+            if q_norm in haystack:
+                filtered.append(d)
+
+        all_docs = filtered
+
+    # Raggruppo per categoria (usando solo i doc filtrati)
     docs_by_cat = {code: [] for code, _ in CATS}
-    for d in cliente.documenti.all().order_by("-caricato_il"):
+    for d in all_docs:
         if d.categoria in docs_by_cat:
             docs_by_cat[d.categoria].append(d)
 
-    pratiche = cliente.pratiche.all().order_by("-data_creazione")  # lasciato com’era
+    # tab attiva dalla querystring, es. ?tab=contratti
+    active_tab = request.GET.get("tab")
+    valid_codes = {code for code, _ in CATS}
+    if active_tab not in valid_codes:
+        active_tab = CATS[0][0]
+
+    pratiche = cliente.pratiche.all().order_by("-data_creazione")
     schede_consulenza = SchedaConsulenza.objects.filter(cliente=cliente).order_by("-created_at")
     note = cliente.note_entries.all().order_by("-creata_il")
     nota_form = NotaForm()
@@ -344,12 +400,14 @@ def clienti_dettaglio(request, cliente_id):
         "crm/cliente_dettaglio.html",
         {
             "cliente": cliente,
-            "categories": CATS,         # elenco (code, label)
-            "docs_by_cat": docs_by_cat, # dict code -> lista documenti
+            "categories": CATS,
+            "docs_by_cat": docs_by_cat,
             "pratiche": pratiche,
             "schede_consulenza": schede_consulenza,
             "note": note,
             "nota_form": nota_form,
+            "active_tab": active_tab,
+            "doc_query": doc_query,
         },
     )
 
@@ -398,47 +456,61 @@ def cliente_elimina(request, cliente_id):
 def documento_nuovo(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
 
+    # categoria proposta dalla tab (es. ?categoria=visure)
+    categoria_param = request.GET.get("categoria")
+    initial = {}
+
+    # verifico che sia una categoria valida
+    valid_codes = {code for code, _ in DocumentoCliente.Categoria.choices}
+    if categoria_param in valid_codes:
+        initial["categoria"] = categoria_param
+
     if request.method == "POST":
         files = request.FILES.getlist("file")  # <- nome del field del form
+
         # passa anche request.FILES così il form vede almeno un file
         form = DocumentoForm(request.POST, request.FILES if files else None)
 
         if not files:
             # niente file selezionati
-            form = DocumentoForm(request.POST)
             form.add_error("file", "Seleziona almeno un file.")
+
         if form.is_valid() and files:
             categoria = form.cleaned_data["categoria"]
-            descr = form.cleaned_data.get("descrizione") or ""
+            descr_input = (form.cleaned_data.get("descrizione") or "").strip()
 
             created = 0
             for f in files:
                 doc = DocumentoCliente(
                     cliente=cliente,
                     categoria=categoria,
-                    descrizione=descr,
+                    descrizione=descr_input,  # <- solo la descrizione scritta dall'utente
                     file=f,
                 )
                 doc.full_clean()
                 doc.save()
                 try:
-                    # sempre keyword args
-                    notify_doc(
-                        actor=request.user, cliente=cliente, documento=doc
-                    )
+                    notify_doc(actor=request.user, cliente=cliente, documento=doc)
                 except Exception:
                     pass
                 created += 1
 
             messages.success(request, f"Caricati {created} documento/i.")
-            return redirect("cliente_dettaglio", cliente_id=cliente.id)
+
+            # dopo l'upload torno al cliente sulla stessa tab della categoria
+            url = reverse("cliente_dettaglio", kwargs={"cliente_id": cliente.id})
+            return redirect(f"{url}?tab={categoria}")
 
         # form non valido → torna al template con gli errori
         return render(request, "crm/documento_form.html", {"form": form, "cliente": cliente})
 
-    # GET → mostra il form
-    form = DocumentoForm()
+    # GET → mostra il form, con categoria precompilata se arrivata da ?categoria=
+    form = DocumentoForm(initial=initial)
     return render(request, "crm/documento_form.html", {"form": form, "cliente": cliente})
+
+
+
+
 
 
 
@@ -448,11 +520,28 @@ def documento_nuovo(request, cliente_id):
 def documento_elimina(request, doc_id):
     doc = get_object_or_404(DocumentoCliente, id=doc_id)
     cliente_id = doc.cliente.id
+
+    # tab corrente: prima provo a leggerla dalla query (?tab=...),
+    # se non c'è uso la categoria del documento
+    tab = request.GET.get("tab") or doc.categoria
+
     if request.method == "POST":
         doc.delete()
         messages.success(request, "Documento eliminato.")
-        return redirect("cliente_dettaglio", cliente_id=cliente_id)
-    return render(request, "crm/documento_conferma_elimina.html", {"doc": doc})
+
+        # redirect alla pagina cliente mantenendo la stessa tab
+        from django.urls import reverse  # se non è già importato in cima al file
+
+        url = reverse("cliente_dettaglio", kwargs={"cliente_id": cliente_id})
+        return redirect(f"{url}?tab={tab}")
+
+    # in GET mostro la pagina di conferma, passando anche "tab"
+    return render(
+        request,
+        "crm/documento_conferma_elimina.html",
+        {"doc": doc, "tab": tab},
+    )
+
 
 
 @login_required

@@ -101,8 +101,8 @@
       // Nascondo l’input nativo e lo configuro per MULTI upload
       file.className = 'file-input file-input-bordered w-full max-w-xs hidden';
       file.setAttribute('accept', '.pdf,.png,.jpg,.jpeg');
-      file.setAttribute('multiple', 'multiple');           // <— QUI
-      file.setAttribute('name', 'file');                   // <— assicurati che sia "file"
+      file.setAttribute('multiple', 'multiple');
+      file.setAttribute('name', 'file');   // assicuriamoci che il name sia "file"
 
       const btn   = document.getElementById('btn-pick');
       const label = document.getElementById('file-name');

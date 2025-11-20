@@ -47,71 +47,120 @@
     </div>
   </div>
 
- <!-- DOCUMENTI -->
-<section class="lg:col-span-2">
-  <div class="card bg-base-100 shadow">
-    <div class="card-body gap-4">
+      <!-- DOCUMENTI -->
+  <section class="lg:col-span-2">
+    <div class="card bg-base-100 shadow">
+      <div class="card-body gap-4">
 
-      <div class="flex items-center justify-between">
-        <h2 class="card-title">Documenti</h2>
-        <div class="flex items-center gap-2">
-          <form action="{% url 'documento_nuovo' cliente.id %}" method="get" class="inline">
-            <button class="btn btn-ghost btn-sm" type="submit">+ Carica documento</button>
-          </form>
-          <a class="btn btn-outline btn-sm" href="{% url 'documenti_zip_cliente' cliente.id %}">📦 Scarica tutti (ZIP)</a>
-          <a class="btn btn-primary btn-sm" href="{% url 'scheda_consulenza_nuova' cliente.id %}">
-            📝 Nuova scheda consulenza
-          </a>
-        </div>
-      </div>
+        <div class="flex flex-col gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="card-title">Documenti</h2>
 
-      {# Tabs dinamiche #}
-      <div class="tabs tabs-lifted" role="tablist" id="docs-tabs">
-        {% for code, label in categories %}
-          <button type="button"
-                  role="tab"
-                  class="tab {% if forloop.first %}tab-active{% endif %}"
-                  data-tab="{{ code }}">
-            {{ label }}
-          </button>
-        {% endfor %}
-      </div>
-
-      <div class="rounded-box border border-base-300 p-4">
-        {% for code, label in categories %}
-          <div id="tab-{{ code }}" class="tab-panel {% if not forloop.first %}hidden{% endif %}">
-            {% with docs=docs_by_cat|get_item:code %}
-              {% if docs %}
-                <ul class="menu gap-2">
-                  {% for d in docs %}
-                    <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
-                      <div class="min-w-0">
-                        <div class="truncate font-medium">{{ d.descrizione|default:d.file.name }}</div>
-                        <div class="text-xs opacity-70">
-                          ID {{ d.id }} — {{ d.get_categoria_display }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
-                        </div>
-                      </div>
-                      <div class="shrink-0 flex items-center gap-2">
-                        <a href="{{ d.file.url }}" class="btn btn-ghost btn-sm">Scarica</a>
-                        <form method="post" action="{% url 'documento_elimina' d.id %}">
-                          {% csrf_token %}
-                          <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
-                        </form>
-                      </div>
-                    </li>
-                  {% endfor %}
-                </ul>
-              {% else %}
-                <div class="text-sm opacity-70">Nessun documento {{ label|lower }}.</div>
-              {% endif %}
-            {% endwith %}
+            <div class="flex items-center gap-2">
+              <form action="{% url 'documento_nuovo' cliente.id %}"
+                    method="get"
+                    class="inline">
+                {# qui passiamo la categoria della tab attiva al form #}
+                <input type="hidden" name="categoria" value="{{ active_tab }}">
+                <button class="btn btn-ghost btn-sm" type="submit">+ Carica documento</button>
+              </form>
+              <a class="btn btn-outline btn-sm" href="{% url 'documenti_zip_cliente' cliente.id %}">
+                📦 Scarica tutti (ZIP)
+              </a>
+            </div>
           </div>
-        {% endfor %}
-      </div>
 
+          {# 🔎 BARRA DI RICERCA DOCUMENTI #}
+          <form method="get" class="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="tab" value="{{ active_tab }}">
+            <input
+              type="text"
+              name="q"
+              value="{{ doc_query }}"
+              class="input input-sm input-bordered w-full sm:w-64"
+              placeholder="Cerca per nome o descrizione"
+            />
+            <button type="submit" class="btn btn-outline btn-sm">
+              Cerca
+            </button>
+            {% if doc_query %}
+              <a href="?tab={{ active_tab }}" class="btn btn-ghost btn-sm">
+                Reset
+              </a>
+            {% endif %}
+          </form>
+        </div>
+
+        {# Tabs server-side: ogni click ricarica con ?tab=... e mantiene la ricerca #}
+        <div class="tabs tabs-lifted" role="tablist">
+          {% for code, label in categories %}
+            <a href="?tab={{ code }}{% if doc_query %}&q={{ doc_query|urlencode }}{% endif %}"
+               role="tab"
+               class="tab {% if code == active_tab %}tab-active{% endif %}">
+              {{ label }}
+            </a>
+          {% endfor %}
+        </div>
+
+        <div class="rounded-box border border-base-300 p-4">
+          {# Mostro solo i documenti della categoria attiva (già filtrati dalla view) #}
+          {% with docs=docs_by_cat|get_item:active_tab %}
+            {% if docs %}
+              <ul class="menu gap-2">
+                {% for d in docs %}
+                  <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+                    <div class="min-w-0">
+                      {# Nome file "pulito" #}
+                      <div class="truncate font-medium">
+                        {{ d.file.name|pretty_filename }}
+                      </div>
+
+                      {# Descrizione opzionale sotto #}
+                      {% if d.descrizione %}
+                        <div class="text-xs opacity-80">
+                          {{ d.descrizione }}
+                        </div>
+                      {% endif %}
+
+                      <div class="text-xs opacity-70">
+                        {{ d.get_categoria_display }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
+                      </div>
+                    </div>
+                    <div class="shrink-0 flex items-center gap-2">
+                      <a href="{{ d.file.url }}"
+                         class="btn btn-ghost btn-sm"
+                         target="_blank"
+                         rel="noopener noreferrer">
+                        Visualizza
+                      </a>
+                      <form method="post" action="{% url 'documento_elimina' d.id %}?tab={{ active_tab }}">
+                        {% csrf_token %}
+                        <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
+                      </form>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              {% if doc_query %}
+                <div class="text-sm opacity-70">
+                  Nessun documento trovato per "<strong>{{ doc_query }}</strong>" in questa categoria.
+                </div>
+              {% else %}
+                <div class="text-sm opacity-70">
+                  Nessun documento in questa categoria.
+                </div>
+              {% endif %}
+            {% endif %}
+          {% endwith %}
+        </div>
+
+      </div>
     </div>
-  </div>
-</section>
+  </section>
+
+
+
 
 
   <!-- NOTE -->
@@ -213,28 +262,6 @@
     </div>
   </section>
 
-
-
 </div>
 
-
-<!-- Tabs JS -->
-<script>
-  (function () {
-    const root = document.getElementById('docs-tabs');
-    if (!root) return;
-
-    const btns = Array.from(root.querySelectorAll('[data-tab]'));
-    const panels = {};
-    btns.forEach(b => { panels[b.dataset.tab] = document.getElementById('tab-' + b.dataset.tab); });
-
-    function activate(key) {
-      btns.forEach(b => b.classList.toggle('tab-active', b.dataset.tab === key));
-      Object.entries(panels).forEach(([k, el]) => el && el.classList.toggle('hidden', k !== key));
-    }
-
-    btns.forEach(b => b.addEventListener('click', () => activate(b.dataset.tab)));
-    // lascia attiva la prima (già marcata nel template)
-  })();
-</script>
 {% endblock %}
