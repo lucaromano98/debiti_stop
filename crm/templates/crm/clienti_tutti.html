@@ -27,9 +27,11 @@
           <div class="label"><span class="label-text">Stato</span></div>
           <select name="stato" class="select select-bordered w-full">
             <option value="">Tutti gli stati</option>
-            <option value="active"   {% if stato == 'active' %}selected{% endif %}>Attivo</option>
-            <option value="inactive" {% if stato == 'inactive' %}selected{% endif %}>Non attivo</option>
-            <option value="legal"    {% if stato == 'legal' %}selected{% endif %}>Legale</option>
+            <option value="active"         {% if stato == 'active' %}selected{% endif %}>Attivo</option>
+            <option value="inactive"       {% if stato == 'inactive' %}selected{% endif %}>Non attivo</option>
+            <option value="legal"          {% if stato == 'legal' %}selected{% endif %}>Legale</option>
+            <option value="stragiudiziale" {% if stato == 'stragiudiziale' %}selected{% endif %}>Stragiudiziale</option>
+            <option value="istanza"        {% if stato == 'istanza' %}selected{% endif %}>Istanza di visibilità</option>
           </select>
         </label>
 
@@ -106,13 +108,17 @@
             <td class="max-w-[40ch] truncate">{{ c.esperienza_finanziaria|default:"—" }}</td>
             <td class="td-nowrap">{{ c.visure|default:"—" }}</td>
             <td class="td-nowrap">{{ c.data_creazione|date:"d/m/Y H:i" }}</td>
-            <td class="td-nowrap">
+           <td class="td-nowrap">
               {% if c.stato == 'active' %}
                 <span class="badge-attivo">Attivo</span>
               {% elif c.stato == 'inactive' %}
                 <span class="badge-negativo">Non attivo</span>
               {% elif c.stato == 'legal' %}
                 <span class="badge-in-corso">Legale</span>
+              {% elif c.stato == 'stragiudiziale' %}
+                <span class="badge-in-corso">Stragiudiziale</span>
+              {% elif c.stato == 'istanza' %}
+                <span class="badge badge-warning">Istanza di visibilità</span>
               {% else %}
                 <span class="badge badge-neutral">—</span>
               {% endif %}

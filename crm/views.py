@@ -211,7 +211,7 @@ def clienti_tutti(request):
             | Q(telefono__icontains=q)
         )
 
-    if stato in {"active", "inactive", "legal"}:
+    if stato in {"active", "inactive", "legal", "stragiudiziale", "instanza"}:
         qs = qs.filter(stato=stato)
 
     dal = _parse_date(dal_raw)
@@ -331,18 +331,21 @@ def clienti_dettaglio(request, cliente_id):
 
     # Categorie da mostrare (ordine tab)
     CATS = [
-        (DocumentoCliente.Categoria.ANAGRAFICI,       "Anagrafici"),
+        (DocumentoCliente.Categoria.ANAGRAFICI,      "Anagrafici"),
         (DocumentoCliente.Categoria.SCHED_CON,       "Scheda Consulenza"),
+        (DocumentoCliente.Categoria.PREVENTIVI,      "Preventivi"),
+        (DocumentoCliente.Categoria.MANDATO,         "Mandato"),
         (DocumentoCliente.Categoria.CONTRATTI,       "Stragiudiziario"),
         (DocumentoCliente.Categoria.VISURE,          "Visure"),
-        (DocumentoCliente.Categoria.RISC_ISTANZA,    "Riscontro istanza"),
-        (DocumentoCliente.Categoria.PROP_TRANSATTIVA,"Proposta transattiva"),
-        (DocumentoCliente.Categoria.DECR_INGIUNTIVO, "Decreto ingiuntivo"),
+        (DocumentoCliente.Categoria.PROVVEDIMENTI,   "Provvedimenti"),
+        (DocumentoCliente.Categoria.DECR_INGIUNTIVO, "Decreto Ingiuntivo"),
         (DocumentoCliente.Categoria.PRECETTO,        "Precetto"),
         (DocumentoCliente.Categoria.PIGNORAMENTO,    "Pignoramento"),
-        (DocumentoCliente.Categoria.MANDATO,         "Mandato"),
+        (DocumentoCliente.Categoria.RICHI_ISTANZA,   "Richiesta Istanza"),
+        (DocumentoCliente.Categoria.RISC_ISTANZA,    "Riscontro Istanza"),
+        (DocumentoCliente.Categoria.RECLAMO,         "Reclamo"),
         (DocumentoCliente.Categoria.OPPOSIZIONE,     "Opposizione"),
-        (DocumentoCliente.Categoria.PREVENTIVI,      "Preventivi"),
+        (DocumentoCliente.Categoria.PROP_TRANSATTIVA,"Proposta transattiva"),
         (DocumentoCliente.Categoria.ALTRO,           "Altro"),
     ]
 

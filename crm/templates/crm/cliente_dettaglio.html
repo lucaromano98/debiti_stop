@@ -23,6 +23,10 @@
               <span class="badge badge-warning badge-outline align-middle ml-2">Non attivo</span>
             {% elif cliente.stato == 'legal' %}
               <span class="badge badge-info badge-outline align-middle ml-2">Legale</span>
+            {% elif cliente.stato == 'stragiudiziale' %}
+              <span class="badge badge-info badge-outline align-middle ml-2">Stragiudiziale</span>
+            {% elif cliente.stato == 'istanza' %}
+              <span class="badge badge-warning badge-outline align-middle ml-2">Istanza di visibilità</span>
             {% else %}
               <span class="badge badge-ghost align-middle ml-2">{{ cliente.stato|default:"—" }}</span>
             {% endif %}

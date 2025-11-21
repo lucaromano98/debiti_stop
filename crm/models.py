@@ -32,6 +32,7 @@ class Cliente(models.Model):
         ("inactive", "Non Attivo"),
         ("legal", "Legale"),
         ("istanza", "Istanza di visibilità"),
+        ("stragiudiziale", "Stragiudiziale"),
     )
 
     nome = models.CharField(max_length=100)
@@ -43,7 +44,7 @@ class Cliente(models.Model):
     visure = models.TextField(blank=True, null=True)  # mantengo per compatibilità
     note = models.TextField(blank=True, null=True)
 
-    stato = models.CharField(max_length=10, choices=STATUS_CHOICES, default="active", db_index=True)
+    stato = models.CharField(max_length=50, choices=STATUS_CHOICES, default="active", db_index=True)
     data_creazione = models.DateTimeField(auto_now_add=True)
 
     # Flag istanza
@@ -72,7 +73,7 @@ class DocumentoCliente(models.Model):
         SCHED_CON         = "scheda_consulenza",   "Scheda Consulenza"
         CONTRATTI         = "contratti",           "Stragiudiziario"
         VISURE            = "visure",              "Visure"
-        RISC_ISTANZA      = "riscontro_istanza",   "Riscontro istanza"
+        RISC_ISTANZA      = "riscontro_istanza",   "Riscontro Istanza"
         PROP_TRANSATTIVA  = "proposta_transattiva","Proposta transattiva"
         DECR_INGIUNTIVO   = "decreto_ingiuntivo",  "Decreto ingiuntivo"
         PRECETTO          = "precetto",            "Precetto"
@@ -81,6 +82,9 @@ class DocumentoCliente(models.Model):
         OPPOSIZIONE       = "opposizione",         "Opposizione"
         PREVENTIVI        = "preventivi",          "Preventivi"
         ALTRO             = "altro",               "Altro"
+        PROVVEDIMENTI     = "provvedimento",       "Provvedimenti"
+        RICHI_ISTANZA     = "richiesta_istanza",   "Richiesta Istanza"
+        RECLAMO           = "reclamo",             "Reclamo"
         
 
         # --- legacy per compatibilità con dati già salvati ---
