@@ -44,6 +44,7 @@
   --success:#22c55e;
   --danger:#ef4444;
   --warning:#f59e0b;
+  --status: #9c00c0;
 }
 
 /* Light (grigio chiaro + arancione tramonto) */
@@ -78,6 +79,7 @@
   --success:#16a34a;
   --danger:#dc2626;
   --warning:#d97706;
+  --status: #9c00c0;
   /* Pulsante tema – LIGHT */
   --theme-btn-bg: rgba(10,20,40,.06);
   --theme-btn-bg-hover: rgba(10,20,40,.10);
@@ -306,6 +308,20 @@ input:focus,select:focus,textarea:focus{
 .badge-orange{ background:rgba(217,119,6,.15); border-color:rgba(217,119,6,.35); color:#ffd9a8 }
 .badge-danger{ background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.35); color:#ffd1d6 }
 .badge-success{ background:rgba(34,197,94,.15); border-color:rgba(34,197,94,.35); color:#d2ffe6 }
+.badge-giudiziale {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9999px;
+
+  background-color: #4c1d95 !important;   /* viola scuro */
+  border: 1px solid #7c3aed !important;   /* contorno violetto */
+  color: #f9fafb !important;              /* testo bianco */
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.25) !important;
+}
 
 /* ========== MESSAGES ========== */
 .messages{display:grid; gap:10px; margin-bottom:16px}

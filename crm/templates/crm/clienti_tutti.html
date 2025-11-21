@@ -80,6 +80,7 @@
               <a href="{% qurl sort='nome' page=None %}" class="link link-hover">Nome</a>
               <span class="sort-raw">▲▼</span>
             </th>
+            <th>Stato</th>
             <th>Email</th>
             <th>Telefono</th>
             <th>Residenza</th>
@@ -89,40 +90,39 @@
               <a href="{% qurl sort='data_creazione' page=None %}" class="link link-hover">Creato</a>
               <span class="sort-raw">▲▼</span>
             </th>
-            <th>Stato</th>
             <th class="th-min td-actions">Azioni</th>
           </tr>
         </thead>
         <tbody>
           {% for c in clienti %}
           <tr
-            data-href="{% url 'cliente_dettaglio' c.pk %}"
+            data-href="{% url 'cliente_dettaglio' c.pk %}" 
             class="cursor-pointer hover:bg-base-200/10"
           >
-            <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
-            <td class="td-nowrap">{{ c.cognome }}</td>
-            <td class="td-nowrap">{{ c.nome }}</td>
+          <td class="td-nowrap">{{ c.cognome }}</td>
+          <td class="td-nowrap">{{ c.nome }}</td>
+          <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
+          <td class="td-nowrap">
+             {% if c.stato == 'active' %}
+               <span class="badge-attivo">Attivo</span>
+             {% elif c.stato == 'inactive' %}
+               <span class="badge-negativo">Non attivo</span>
+             {% elif c.stato == 'legal' %}
+               <span class="badge-in-corso">Legale</span>
+             {% elif c.stato == 'stragiudiziale' %}
+                <span class="badge-giudiziale">Stragiudiziale</span>
+              {% elif c.stato == 'istanza' %}
+                <span class="badge badge-warning">Istanza di visibilità</span>
+              {% else %}
+               <span class="badge badge-neutral">—</span>
+             {% endif %}
+           </td>
             <td class="td-nowrap">{{ c.email|default:"—" }}</td>
             <td class="td-nowrap">{{ c.telefono|default:"—" }}</td>
             <td class="td-nowrap">{{ c.residenza|default:"—" }}</td>
             <td class="max-w-[40ch] truncate">{{ c.esperienza_finanziaria|default:"—" }}</td>
             <td class="td-nowrap">{{ c.visure|default:"—" }}</td>
             <td class="td-nowrap">{{ c.data_creazione|date:"d/m/Y H:i" }}</td>
-           <td class="td-nowrap">
-              {% if c.stato == 'active' %}
-                <span class="badge-attivo">Attivo</span>
-              {% elif c.stato == 'inactive' %}
-                <span class="badge-negativo">Non attivo</span>
-              {% elif c.stato == 'legal' %}
-                <span class="badge-in-corso">Legale</span>
-              {% elif c.stato == 'stragiudiziale' %}
-                <span class="badge-in-corso">Stragiudiziale</span>
-              {% elif c.stato == 'istanza' %}
-                <span class="badge badge-warning">Istanza di visibilità</span>
-              {% else %}
-                <span class="badge badge-neutral">—</span>
-              {% endif %}
-            </td>
             <td class="td-actions">
               <div class="join">
                 <a href="{% url 'cliente_dettaglio' c.pk %}" class="btn btn-ghost btn-sm join-item">Apri</a>

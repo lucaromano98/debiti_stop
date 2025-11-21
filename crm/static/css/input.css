@@ -87,6 +87,12 @@
   .badge-attivo   { @apply badge badge-success badge-outline; }
   .badge-negativo { @apply badge badge-error  badge-outline; }
   .badge-in-corso { @apply badge badge-info   badge-outline; }
+   .badge-giudiziale {
+    @apply inline-flex items-center justify-center rounded-full border text-xs font-semibold px-3 py-1;
+    background-color: #4c1d95;  /* viola scuro pieno */
+    border-color: #7c3aed;      /* violetto un po' più chiaro */
+    color: #f9fafb;             /* testo bianco */
+  }
 
   .pager {
     @apply flex items-center justify-between gap-3 p-3 border-t border-base-300/60
