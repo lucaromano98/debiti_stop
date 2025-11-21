@@ -99,9 +99,9 @@
             data-href="{% url 'cliente_dettaglio' c.pk %}" 
             class="cursor-pointer hover:bg-base-200/10"
           >
+          <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
           <td class="td-nowrap">{{ c.cognome }}</td>
           <td class="td-nowrap">{{ c.nome }}</td>
-          <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
           <td class="td-nowrap">
              {% if c.stato == 'active' %}
                <span class="badge-attivo">Attivo</span>
