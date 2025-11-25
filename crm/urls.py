@@ -1,6 +1,7 @@
 from django.urls import path, include
 from django.contrib.auth.views import LogoutView
 from django.contrib.auth import views as auth_views
+from . import views
 
 from .views import (
     # auth / base
@@ -67,6 +68,7 @@ urlpatterns = [
     path("clienti/<int:cliente_id>/documenti/nuovo/", documento_nuovo, name="documento_nuovo"),
     path("documenti/<int:doc_id>/elimina/", documento_elimina, name="documento_elimina"),
     path("clienti/<int:cliente_id>/documenti/zip/", documenti_zip_cliente, name="documenti_zip_cliente"),
+    path("documenti/<int:documento_id>/modifica/", views.documento_modifica, name="documento_modifica"),
 
     # Pratiche
     path("clienti/<int:cliente_id>/pratiche/nuova/", pratica_nuova, name="pratica_nuova"),

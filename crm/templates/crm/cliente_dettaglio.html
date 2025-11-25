@@ -8,6 +8,19 @@
 {% block title %}{{ cliente.nome }} {{ cliente.cognome }} · Cliente{% endblock %}
 
 {% block content %}
+<style>
+  /* Overlay per anteprima documenti (solo immagini) */
+  .doc-preview {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;              /* mostrata via JS con display:flex */
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+
 <div class="mx-auto max-w-[min(1400px,100%)] space-y-6">
 
   <!-- HEADER -->
@@ -51,7 +64,7 @@
     </div>
   </div>
 
-      <!-- DOCUMENTI -->
+  <!-- DOCUMENTI -->
   <section class="lg:col-span-2">
     <div class="card bg-base-100 shadow">
       <div class="card-body gap-4">
@@ -112,7 +125,26 @@
             {% if docs %}
               <ul class="menu gap-2">
                 {% for d in docs %}
-                  <li class="flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+                  <li class="doc-row flex items-center justify-between gap-2 border border-base-300/60 rounded-lg px-3 py-2">
+
+                    {# OVERLAY ANTEPRIMA (SOLO IMMAGINI) #}
+                    {% if d.is_image %}
+                      <div class="doc-preview">
+                        <div class="card bg-base-100 shadow-xl border border-base-300/60" style="max-width: 90vw; max-height: 90vh;">
+                          <div class="card-body p-4" style="width: 80vw; height: 70vh; overflow-y: auto;">
+                            <img
+                              src="{{ d.file.url }}"
+                              alt="{{ d.file.name|pretty_filename }}"
+                              class="w-full h-auto rounded object-contain"
+                            />
+                            <div class="text-xs mt-2 opacity-70 truncate">
+                              {{ d.file.name|pretty_filename }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    {% endif %}
+
                     <div class="min-w-0">
                       {# Nome file "pulito" #}
                       <div class="truncate font-medium">
@@ -130,6 +162,7 @@
                         {{ d.get_categoria_display }} — {{ d.caricato_il|date:"d/m/Y H:i" }}
                       </div>
                     </div>
+
                     <div class="shrink-0 flex items-center gap-2">
                       <a href="{{ d.file.url }}"
                          class="btn btn-ghost btn-sm"
@@ -137,6 +170,11 @@
                          rel="noopener noreferrer">
                         Visualizza
                       </a>
+
+                      <a href="{% url 'documento_modifica' d.id %}?tab={{ active_tab }}" class="btn btn-outline btn-sm">
+                        Modifica
+                      </a>
+
                       <form method="post" action="{% url 'documento_elimina' d.id %}?tab={{ active_tab }}">
                         {% csrf_token %}
                         <button class="btn btn-outline btn-sm" title="Elimina">Elimina</button>
@@ -162,10 +200,6 @@
       </div>
     </div>
   </section>
-
-
-
-
 
   <!-- NOTE -->
   <section>
@@ -267,5 +301,48 @@
   </section>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const rows = document.querySelectorAll('.doc-row');
+
+    // Doppio click sulla riga: apre/chiude la preview relativa (solo immagini)
+    rows.forEach(function (row) {
+      row.addEventListener('dblclick', function (event) {
+        // Evitiamo il toggle se il doppio click è su link/bottoni
+        const target = event.target;
+        if (target.closest('a') || target.closest('button') || target.closest('form')) {
+          return;
+        }
+
+        const preview = row.querySelector('.doc-preview');
+        if (!preview) return;
+
+        const isVisible = preview.style.display === 'flex';
+
+        // Chiude tutte le altre preview
+        document.querySelectorAll('.doc-preview').forEach(function (p) {
+          p.style.display = 'none';
+        });
+
+        // Se non era visibile, apri questa
+        if (!isVisible) {
+          preview.style.display = 'flex';
+        }
+      });
+    });
+
+    // Click in qualsiasi punto dello schermo: chiude eventuali preview aperte
+    document.addEventListener('click', function (event) {
+      const previews = document.querySelectorAll('.doc-preview');
+      const anyOpen = Array.from(previews).some(p => p.style.display === 'flex');
+      if (!anyOpen) return;
+
+      previews.forEach(function (p) {
+        p.style.display = 'none';
+      });
+    });
+  });
+</script>
 
 {% endblock %}

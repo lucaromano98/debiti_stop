@@ -62,6 +62,11 @@ class DocumentoForm(forms.ModelForm):
         return v
 
 
+class DocumentoClienteEditForm(forms.ModelForm):
+    class Meta:
+        model = DocumentoCliente
+        fields = ["categoria", "descrizione"]
+
 # =========================
 # Pratica
 # =========================

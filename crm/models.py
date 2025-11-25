@@ -7,7 +7,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -71,7 +70,7 @@ class DocumentoCliente(models.Model):
     class Categoria(models.TextChoices):
         ANAGRAFICI        = "anagrafici",          "Documenti anagrafici"
         SCHED_CON         = "scheda_consulenza",   "Scheda Consulenza"
-        CONTRATTI         = "contratti",           "Stragiudiziario"
+        CONTRATTI         = "contratti",           "Privato Admin"
         VISURE            = "visure",              "Visure"
         RISC_ISTANZA      = "riscontro_istanza",   "Riscontro Istanza"
         PROP_TRANSATTIVA  = "proposta_transattiva","Proposta transattiva"
@@ -100,7 +99,6 @@ class DocumentoCliente(models.Model):
     )
     file = models.FileField(
         upload_to=client_directory_path,
-        validators=[FileExtensionValidator(allowed_extensions=["pdf", "png", "jpg", "jpeg"])],
     )
     descrizione = models.CharField(max_length=255, blank=True, null=True)
     caricato_il = models.DateTimeField(auto_now_add=True)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, date, timedelta
 import io, os, zipfile
+from django.utils import timezone
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -15,7 +16,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from .services import converti_lead_in_cliente
 from .services import notifica_documento_caricato as _notify_doc_raw
-from .forms import ClienteForm, DocumentoForm, PraticaForm, NotaForm, LeadForm, SchedaConsulenzaForm
+from .forms import ClienteForm, DocumentoForm, PraticaForm, NotaForm, LeadForm, SchedaConsulenzaForm, DocumentoClienteEditForm
 from .models import (
     Cliente,
     DocumentoCliente,
@@ -302,13 +303,26 @@ def clienti_non_attivi(request):
 @user_passes_test(has_portal_access)
 def cliente_nuovo(request):
     if request.method == "POST":
-        form = ClienteForm(request.POST)  # il form non ha file fields: request.FILES non serve
+        form = ClienteForm(request.POST)
         if form.is_valid():
             cliente = form.save()
+
             if cliente.perizia_inviata and cliente.stato != "active":
                 cliente.stato = "active"
                 cliente.save(update_fields=["stato"])
+
             _allega_visure(request, cliente)
+
+            # 🔹 se nel form hanno scritto qualcosa nel campo "note",
+            #     crea una nota identica a quelle di "+ Aggiungi nota"
+            if cliente.note:
+                Nota.objects.create(
+                    cliente=cliente,
+                    testo=cliente.note,
+                    # se nel modello c'è un campo autore, usa request.user
+                    autore=getattr(request, "user", None),
+                )
+
             messages.success(request, "Cliente creato.")
             return redirect("clienti_tutti")
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
@@ -328,6 +342,7 @@ def clienti_possibili(request):
 @user_passes_test(has_portal_access)
 def clienti_dettaglio(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
+    is_admin_user = is_admin(request.user)
 
     # Categorie da mostrare (ordine tab)
     CATS = [
@@ -335,7 +350,7 @@ def clienti_dettaglio(request, cliente_id):
         (DocumentoCliente.Categoria.SCHED_CON,       "Scheda Consulenza"),
         (DocumentoCliente.Categoria.PREVENTIVI,      "Preventivi"),
         (DocumentoCliente.Categoria.MANDATO,         "Mandato"),
-        (DocumentoCliente.Categoria.CONTRATTI,       "Stragiudiziario"),
+        (DocumentoCliente.Categoria.CONTRATTI,       "Privato Admin"),
         (DocumentoCliente.Categoria.VISURE,          "Visure"),
         (DocumentoCliente.Categoria.PROVVEDIMENTI,   "Provvedimenti"),
         (DocumentoCliente.Categoria.DECR_INGIUNTIVO, "Decreto Ingiuntivo"),
@@ -349,13 +364,37 @@ def clienti_dettaglio(request, cliente_id):
         (DocumentoCliente.Categoria.ALTRO,           "Altro"),
     ]
 
+    # solo gli admin possono vedere Privato Admin
+    if not is_admin_user:
+        CATS = [
+            (code, label)
+            for (code, label) in CATS
+            if code != DocumentoCliente.Categoria.CONTRATTI
+        ]
+
     # 🔎 testo di ricerca
     doc_query = (request.GET.get("q") or "").strip()
     q_norm = doc_query.lower().replace(" ", "") if doc_query else ""
 
-    # prendo tutti i documenti del cliente
-    all_docs_qs = cliente.documenti.all().order_by("-caricato_il")
+    # prendo tutti i documenti del cliente (senza ordine, lo gestiamo noi)
+    all_docs_qs = cliente.documenti.all()
     all_docs = list(all_docs_qs)
+
+    # funzione per avere un nome "umano" con cui ordinare
+    def _normalized_filename(doc):
+        path = doc.file.name or ""
+        base = os.path.basename(path)          # es: 1763_ci-mario-rossi.jpg
+        name, ext = os.path.splitext(base)     # es: 1763_ci-mario-rossi , .jpg
+        parts = name.split("_", 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            name = parts[1]                    # es: ci-mario-rossi
+        name = name.replace("-", " ")          # es: ci mario rossi
+        return f"{name}{ext}".lower()
+
+    # helper per capire se è un’immagine (per l’anteprima)
+    def _is_image(doc):
+        fname = (doc.file.name or "").lower()
+        return fname.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp"))
 
     # filtro in PYTHON così possiamo gestire spazi / trattini / maiuscole
     if q_norm:
@@ -366,12 +405,12 @@ def clienti_dettaglio(request, cliente_id):
 
             # nome file "umano" (simile al pretty_filename del template)
             path = d.file.name or ""
-            base = os.path.basename(path)                      # 1763_ci-mario-rossi.jpg
-            name, ext = os.path.splitext(base)                 # 1763_ci-mario-rossi , .jpg
+            base = os.path.basename(path)
+            name, ext = os.path.splitext(base)
             parts = name.split("_", 1)
             if len(parts) == 2 and parts[0].isdigit():
-                name = parts[1]                                # ci-mario-rossi
-            name = name.replace("-", " ")                      # ci mario rossi
+                name = parts[1]
+            name = name.replace("-", " ")
             filename_text = f"{name}{ext}".lower()
 
             # normalizzo togliendo spazi per la ricerca
@@ -381,9 +420,16 @@ def clienti_dettaglio(request, cliente_id):
 
         all_docs = filtered
 
+    # 🔤 ordino alfabeticamente per nome "umano"
+    all_docs.sort(key=_normalized_filename)
+
     # Raggruppo per categoria (usando solo i doc filtrati)
     docs_by_cat = {code: [] for code, _ in CATS}
     for d in all_docs:
+        # info extra per il template (anteprima)
+        d.is_image = _is_image(d)
+        d.extension = os.path.splitext(d.file.name or "")[1].lower()
+
         if d.categoria in docs_by_cat:
             docs_by_cat[d.categoria].append(d)
 
@@ -414,26 +460,101 @@ def clienti_dettaglio(request, cliente_id):
         },
     )
 
+@login_required
+@user_passes_test(has_portal_access)
+@require_http_methods(["GET", "POST"])
+def documento_modifica(request, documento_id):
+    documento = get_object_or_404(DocumentoCliente, pk=documento_id)
+    cliente = documento.cliente
 
+    # tab corrente (categoria) per tornare alla stessa tab dopo il salvataggio
+    current_tab = request.GET.get("tab") or request.POST.get("tab") or documento.categoria
+
+    if request.method == "POST":
+        form = DocumentoClienteEditForm(request.POST, instance=documento)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Documento aggiornato correttamente.")
+            url = reverse("cliente_dettaglio", args=[cliente.id])
+            return redirect(f"{url}?tab={current_tab}")
+        else:
+            messages.error(request, "Controlla i campi: ci sono errori nel form.")
+    else:
+        form = DocumentoClienteEditForm(instance=documento)
+
+    return render(
+        request,
+        "crm/documento_form.html",
+        {
+            "form": form,
+            "documento": documento,
+            "cliente": cliente,
+            "active_tab": current_tab,
+        },
+    )
+
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_http_methods(["GET", "POST"])
 @login_required
 @user_passes_test(has_portal_access)
 @require_http_methods(["GET", "POST"])
 def cliente_modifica(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
+    old_note = cliente.note  # 🔹 salviamo la nota prima delle modifiche
+
     if request.method == "POST":
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             cliente = form.save()
+
             if cliente.perizia_inviata and cliente.stato != "active":
                 cliente.stato = "active"
                 cliente.save(update_fields=["stato"])
+
             _allega_visure(request, cliente)
+
+            # 🔹 se la nota non è vuota ed è cambiata rispetto a prima
+            if cliente.note and cliente.note != old_note:
+                # proviamo a trovare una nota esistente con il vecchio testo
+                nota_esistente = None
+                if old_note:
+                    nota_esistente = (
+                        cliente.note_entries
+                        .filter(testo=old_note)
+                        .order_by("-creata_il")
+                        .first()
+                    )
+
+                if nota_esistente:
+                    # aggiorniamo quella esistente
+                    nota_esistente.testo = cliente.note
+                    nota_esistente.autore = getattr(request, "user", None)
+                    # se vuoi aggiornare anche la data:
+                    # nota_esistente.creata_il = timezone.now()
+                    nota_esistente.save()
+                else:
+                    # altrimenti ne creiamo una nuova
+                    Nota.objects.create(
+                        cliente=cliente,
+                        testo=cliente.note,
+                        autore=getattr(request, "user", None),
+                    )
+
             messages.success(request, "Cliente aggiornato.")
             return redirect("cliente_dettaglio", cliente_id=cliente.id)
+
         messages.error(request, "Controlla i campi: ci sono errori nel form.")
     else:
         form = ClienteForm(instance=cliente)
-    return render(request, "crm/cliente_form.html", {"form": form, "is_edit": True, "cliente": cliente})
+
+    return render(
+        request,
+        "crm/cliente_form.html",
+        {"form": form, "is_edit": True, "cliente": cliente},
+    )
+
 
 
 @login_required

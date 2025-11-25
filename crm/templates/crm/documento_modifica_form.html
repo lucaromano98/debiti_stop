@@ -1,0 +1,65 @@
+{% extends "crm/base.html" %}
+
+{% block title %}Modifica documento — {{ cliente.nome }} {{ cliente.cognome }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-xl space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-sm opacity-70">Modifica documento — {{ cliente.nome }} {{ cliente.cognome }}</p>
+      <h1 class="text-2xl font-extrabold tracking-tight">Modifica documento</h1>
+    </div>
+    <a href="{% url 'cliente_dettaglio' cliente.id %}?tab={{ active_tab }}" class="btn btn-ghost">⟵ Torna al dettaglio</a>
+  </div>
+
+  <!-- Card -->
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-error mb-4">
+          <span>Controlla i campi: ci sono errori nel form.</span>
+        </div>
+      {% endif %}
+
+      <p class="text-xs opacity-70 mb-3 break-all">
+        File: <span class="font-mono">{{ documento.file.name }}</span>
+      </p>
+
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="{{ active_tab }}">
+
+        <!-- Categoria -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Tipologia documento</span>
+          </label>
+          {{ form.categoria }}
+          {% for e in form.categoria.errors %}
+            <p class="text-error text-sm mt-1">{{ e }}</p>
+          {% endfor %}
+        </div>
+
+        <!-- Descrizione -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Descrizione</span>
+          </label>
+          {{ form.descrizione }}
+          {% for e in form.descrizione.errors %}
+            <p class="text-error text-sm mt-1">{{ e }}</p>
+          {% endfor %}
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <a href="{% url 'cliente_dettaglio' cliente.id %}?tab={{ active_tab }}" class="btn btn-ghost">Annulla</a>
+          <button type="submit" class="btn btn-primary">Salva modifiche</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
