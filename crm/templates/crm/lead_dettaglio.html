@@ -41,44 +41,65 @@
   </div>
 
   <!-- AZIONI RAPIDE -->
-  <div class="card bg-base-100 shadow">
-    <div class="card-body gap-3">
-      <div class="flex flex-wrap items-center gap-2">
-        <form method="post" action="{% url 'lead_toggle_msg' lead.id %}">
-          {% csrf_token %}
-          <button class="btn btn-outline btn-sm">
-            {% if lead.messaggio_inviato %}✅ Messaggio inviato{% else %}Segna messaggio inviato{% endif %}
-          </button>
-        </form>
-        <form method="post" action="{% url 'lead_toggle_no_risposta' lead.id %}">
-          {% csrf_token %}
-          <button class="btn btn-outline btn-sm">
-            {% if lead.no_risposta %}❗ Senza risposta{% else %}Segna senza risposta{% endif %}
-          </button>
-        </form>
-        <form method="post" action="{% url 'lead_toggle_consulenza' lead.id %}">
-          {% csrf_token %}
-          <button class="btn btn-outline btn-sm">
-            {% if lead.consulenza_effettuata %}🗹 Consulenza effettuata{% else %}Segna consulenza effettuata{% endif %}
-          </button>
-        </form>
+<!-- AZIONI RAPIDE -->
+<div class="card bg-base-100 shadow">
+  <div class="card-body gap-4">
+
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div>
+        <div class="text-xs opacity-60 mb-1">Stato lavorazione attuale</div>
+
+        {% if lead.stato_operativo == 'consulenza_eff' %}
+          <span class="badge badge-success badge-outline">Consulenza effettuata</span>
+        {% elif lead.stato_operativo == 'no_risposta' %}
+          <span class="badge badge-warning badge-outline">Senza risposta</span>
+        {% elif lead.stato_operativo == 'msg_inviato' %}
+          <span class="badge badge-info badge-outline">Messaggio inviato</span>
+        {% elif lead.stato_operativo == 'in_acquisizione' %}
+          <span class="badge badge-primary badge-outline">In acquisizione</span>
+        {% elif lead.stato_operativo == 'non_competenza' %}
+          <span class="badge badge-neutral badge-outline">Attività non di competenza</span>
+        {% elif lead.stato_operativo == 'attesa_contatti' %}
+          <span class="badge badge-accent badge-outline">Attesa contatti cliente</span>
+        {% else %}
+          <span class="badge badge-ghost">Nuovo</span>
+        {% endif %}
       </div>
 
-      {% if lead.motivazione_negativa %}
-        <div class="alert alert-warning mt-2">
-          <span class="font-semibold">Motivazione esito negativo:</span>
-          <span class="ml-1">{{ lead.motivazione_negativa }}</span>
+      <form method="post" action="{% url 'lead_aggiorna_stato_operativo' lead.id %}" class="flex flex-wrap items-end gap-2">
+        {% csrf_token %}
+        <div class="form-control min-w-[280px]">
+          <label class="label py-0 mb-1">
+            <span class="label-text text-xs opacity-70">Aggiorna stato</span>
+          </label>
+          <select name="stato_operativo" class="select select-bordered select-sm">
+            {% for val, label in STATI_OPERATIVI %}
+              <option value="{{ val }}" {% if lead.stato_operativo == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
-      {% endif %}
-
-      {% if lead.note_operatori %}
-        <div class="mt-2">
-          <div class="text-xs opacity-60">Note operatori</div>
-          <p class="whitespace-pre-line mt-1">{{ lead.note_operatori }}</p>
-        </div>
-      {% endif %}
+        <button class="btn btn-primary btn-sm" type="submit">Salva stato</button>
+      </form>
     </div>
+
+    {% if lead.motivazione_negativa %}
+      <div class="alert alert-warning mt-1">
+        <span class="font-semibold">Motivazione esito negativo:</span>
+        <span class="ml-1">{{ lead.motivazione_negativa }}</span>
+      </div>
+    {% endif %}
+
+    {% if lead.note_operatori %}
+      <div class="mt-1">
+        <div class="text-xs opacity-60">Note operatori</div>
+        <p class="whitespace-pre-line mt-1">{{ lead.note_operatori }}</p>
+      </div>
+    {% endif %}
+
   </div>
+</div>
 
   <!-- SCHEDE DI CONSULENZA -->
   <section>

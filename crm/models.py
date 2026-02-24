@@ -182,14 +182,33 @@ class Lead(models.Model):
         ("positivo", "Esito positivo"),
     )
 
+    # NUOVO: stato operativo / workflow
+    class StatoOperativo(models.TextChoices):
+        NUOVO = "nuovo", "Nuovo"
+        MESSAGGIO_INVIATO = "msg_inviato", "Messaggio inviato"
+        SENZA_RISPOSTA = "no_risposta", "Senza risposta"
+        CONSULENZA_EFFETTUATA = "consulenza_eff", "Consulenza effettuata"
+        IN_ACQUISIZIONE = "in_acquisizione", "In acquisizione"
+        NON_DI_COMPETENZA = "non_competenza", "Attività non di competenza"
+        ATTESA_CONTATTI_CLIENTE = "attesa_contatti", "Attesa contatti cliente"
+
     # Anagrafica base
     nome = models.CharField(max_length=100)
     cognome = models.CharField(max_length=100)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
 
-    # Stato/Fasi
+    # Stato/Fasi (esito generale)
     stato = models.CharField(max_length=20, choices=STATO_CHOICES, default="in_corso", db_index=True)
+
+    # NUOVO: workflow operativo
+    stato_operativo = models.CharField(
+        max_length=30,
+        choices=StatoOperativo.choices,
+        default=StatoOperativo.NUOVO,
+        db_index=True,
+    )
+
     appuntamento_previsto = models.DateTimeField(blank=True, null=True)
     motivazione_negativa = models.TextField(blank=True, null=True)
     note_operatori = models.TextField(blank=True, null=True)
@@ -229,16 +248,18 @@ class Lead(models.Model):
     is_archiviato = models.BooleanField(default=False)
     creato_il = models.DateTimeField(auto_now_add=True)
 
-    # Flag operativi
+    # Flag operativi (TEMPORANEI: li lasciamo per migrazione dati, poi li rimuoviamo)
     consulenza_effettuata = models.BooleanField(default=False)
     no_risposta = models.BooleanField(default=False)
     messaggio_inviato = models.BooleanField(default=False)
     in_acquisizione = models.BooleanField(default=False)
+
     richiamare_il = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["stato"]),
+            models.Index(fields=["stato_operativo"]),  # nuovo indice
             models.Index(fields=["convertito", "is_archiviato"]),
         ]
 

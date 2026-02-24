@@ -403,3 +403,5 @@ h1,h2,h3{margin:0 0 12px}
 /* Nascondi sidebar nel login */
 body.auth .sidebar { display: none !important; }
 body.auth .layout  { grid-template-columns: 1fr !important; }
+
+

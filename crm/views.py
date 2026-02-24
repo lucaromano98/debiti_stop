@@ -823,9 +823,7 @@ def lead_lista(request):
     dal_raw = request.GET.get("dal", "").strip()
     al_raw = request.GET.get("al", "").strip()
 
-    only_no_risposta = request.GET.get("no_risposta", "") == "1"
-    only_msg_inviato = request.GET.get("msg_inviato", "") == "1"
-    only_acquisizione = request.GET.get("in_acquisizione", "") == "1"
+    stato_operativo = request.GET.get("stato_operativo", "").strip()
     richiamo_da_raw = request.GET.get("richiamo_da", "").strip()
     richiamo_a_raw = request.GET.get("richiamo_a", "").strip()
 
@@ -850,12 +848,8 @@ def lead_lista(request):
     if al:
         qs = qs.filter(creato_il__date__lte=al)
 
-    if only_no_risposta:
-        qs = qs.filter(no_risposta=True)
-    if only_msg_inviato:
-        qs = qs.filter(messaggio_inviato=True)
-    if only_acquisizione:
-        qs = qs.filter(in_acquisizione=True)
+    if stato_operativo in dict(Lead.StatoOperativo.choices):
+        qs = qs.filter(stato_operativo=stato_operativo)
 
     richiamo_da = _parse_date(richiamo_da_raw)
     richiamo_a = _parse_date(richiamo_a_raw)
@@ -907,9 +901,8 @@ def lead_lista(request):
         "leads": page_obj.object_list,
         "page_obj": page_obj,
         "q": q, "stato": stato, "dal": dal_raw, "al": al_raw,
-        "no_risposta": "1" if only_no_risposta else "",
-        "msg_inviato": "1" if only_msg_inviato else "",
-        "in_acquisizione": "1" if only_acquisizione else "",
+        "stato_operativo": stato_operativo,
+        "STATI_OPERATIVI": Lead.StatoOperativo.choices,
         "richiamo_da": richiamo_da_raw, "richiamo_a": richiamo_a_raw,
         "sort": sort_raw, "ha_negativi": ha_negativi, "per": per_page,
         "provenienza": provenienza,
@@ -970,7 +963,26 @@ def lead_dettaglio(request, lead_id):
     return render(request, "crm/lead_dettaglio.html", {
         "lead": lead,
         "schede_consulenza": schede,
+        "STATI_OPERATIVI": Lead.StatoOperativo.choices,  
     })
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_POST
+def lead_aggiorna_stato_operativo(request, lead_id):
+    lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
+
+    nuovo_stato = (request.POST.get("stato_operativo") or "").strip()
+    stati_validi = {k for k, _ in Lead.StatoOperativo.choices}
+
+    if nuovo_stato in stati_validi:
+        lead.stato_operativo = nuovo_stato
+        lead.save(update_fields=["stato_operativo"])
+        messages.success(request, "Stato lavorazione aggiornato.")
+    else:
+        messages.error(request, "Stato lavorazione non valido.")
+
+    return redirect(_back(request))
 
 
 @login_required
