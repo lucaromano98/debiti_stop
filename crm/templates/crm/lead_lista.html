@@ -115,14 +115,15 @@
 
         <div class="grid grid-cols-2 gap-3">
           <label class="form-control">
-            <div class="label"><span class="label-text">Creati dal</span></div>
-            <input type="date" name="dal" value="{{ dal }}" class="input input-bordered w-full" />
+            <div class="label"><span class="label-text">Primo Contatto</span></div>
+            <input type="date" name="primo_contatto" value="{{ primo_contatto }}" class="input input-bordered w-full" />
           </label>
           <label class="form-control">
-            <div class="label"><span class="label-text">Creati al</span></div>
-            <input type="date" name="al" value="{{ al }}" class="input input-bordered w-full" />
+            <div class="label"><span class="label-text">Appuntamento</span></div>
+            <input type="date" name="appuntamento" value="{{ appuntamento }}" class="input input-bordered w-full" />
           </label>
         </div>
+
       </div>
 
       {# --- FILTRI: PROVENIENZA + CONSULENTE + STATO LAVORAZIONE --- #}
@@ -158,6 +159,19 @@
             {% endfor %}
           </select>
         </label>
+
+        <label class="form-control">
+          <div class="label"><span class="label-text">Creditore legale</span></div>
+          <select name="creditore_legale" class="select select-bordered w-full">
+            <option value="">Tutti</option>
+            {% for val,label in CREDITORI_LEGALI %}
+              <option value="{{ val }}" {% if creditore_legale == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+
       </div>
 
       <!-- Quick filter appuntamenti -->
@@ -212,6 +226,7 @@
               <span class="sort-raw">▲▼</span>
             </th>
             <th>Lavorazione</th>
+            <th>Creditore Legale</th>
             <th>Email</th>
             <th>Telefono</th>
             <th>
@@ -268,6 +283,14 @@
                 <span class="badge-work badge-work-attesa">Attesa contatti</span>
               {% else %}
                 <span class="badge-work badge-work-nuovo">Nuovo</span>
+              {% endif %}
+            </td>
+
+            <td class="td-nowrap">
+              {% if l.creditore_legale == "altro" and l.creditore_legale_altro %}
+                {{ l.creditore_legale_altro }}
+              {% else %}
+                {{ l.get_creditore_legale_display|default:"—" }}
               {% endif %}
             </td>
 
@@ -342,9 +365,9 @@
     r.addEventListener('change', () => r.form && r.form.submit());
   });
 
-  document.querySelectorAll('select[name="provenienza"], select[name="consulente"], select[name="stato_operativo"]').forEach(s => {
-    s.addEventListener('change', () => s.form && s.form.submit());
-  });
+ document.querySelectorAll('select[name="provenienza"], select[name="consulente"], select[name="creditore_legale"]').forEach(s => {
+  s.addEventListener('change', () => s.form && s.form.submit());
+});
 
   document.querySelectorAll('.lead-row').forEach(row => {
     row.addEventListener('dblclick', (e) => {

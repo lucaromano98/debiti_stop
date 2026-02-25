@@ -33,7 +33,7 @@ SECRET_KEY = 'django-insecure-az9_56mi8$znwu7j!rh7wr=g*#0!nav1kfdgswkz5b@@w4cj=c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["db-backoffice.it", "www.db-backoffice.it", "127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -147,6 +147,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles") 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -157,8 +158,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL= "/login/"
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/login/'
-
-STATIC_URL = '/static/'
 
 #Configurazione per i media del folder
 MEDIA_URL = "/media/"

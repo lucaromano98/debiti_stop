@@ -23,6 +23,18 @@ class Consulente(models.Model):
     def __str__(self) -> str:
         return self.nome
 
+# --- CREDITORI / BANCHE ---
+class CreditoreLegale(models.TextChoices):
+        BANCA_IFIS = "banca_ifis", "Banca Ifis"
+        MB_CREDIT = "mb_credit", "MB Credit"
+        KRUK = "kruk", "Kruk"
+        ITACAPITAL = "itacapital", "Itacapital"
+        CHERRY_BANK = "cherry_bank", "Cherry Bank"
+        MARATHON_SPV = "marathon_spv", "Marathon SPV"
+        PRELIOS = "prelios", "Prelios"
+        KERDOS = "kerdos", "Kerdos"
+        INTRUM = "intrum", "Intrum"
+        ALTRO = "altro", "Altro"
 
 # --- CLIENTI ---
 class Cliente(models.Model):
@@ -53,6 +65,22 @@ class Cliente(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nome} {self.cognome}"
+    
+
+    creditore_legale = models.CharField(
+        max_length=30,
+        choices= CreditoreLegale.choices,
+        blank = True,
+        default = "",
+        help_text = "Creditore/Banca/Finanziaria"
+    )
+
+    creditore_legale_altro = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        help_text="Se selezioni 'Altro', scrivi qui il nome",
+    )    
 
 
 # --- DOCUMENTI ---
@@ -198,6 +226,22 @@ class Lead(models.Model):
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
 
+    # Creditori Legali 
+    creditore_legale = models.CharField(
+        max_length=30,
+        choices=CreditoreLegale.choices,
+        blank=True,
+        default="",
+        help_text="Creditore/Banca/Finanziaria",
+    )
+
+    creditore_legale_altro = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        help_text="Se selezioni 'Altro', scrivi qui il nome",
+    )
+
     # Stato/Fasi (esito generale)
     stato = models.CharField(max_length=20, choices=STATO_CHOICES, default="in_corso", db_index=True)
 
@@ -265,6 +309,7 @@ class Lead(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nome} {self.cognome} ({self.get_stato_display()})"
+    
 
 
 # --- NOTIFICHE ---

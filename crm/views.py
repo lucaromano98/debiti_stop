@@ -3,6 +3,12 @@ from datetime import datetime, date, timedelta
 import io, os, zipfile
 from django.utils import timezone
 
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import simpleSplit
+from django.http import HttpResponse
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
@@ -25,7 +31,8 @@ from .models import (
     Lead,
     Consulente,
     Notifica,
-    SchedaConsulenza
+    SchedaConsulenza,
+    CreditoreLegale
 )
 
 
@@ -203,6 +210,7 @@ def clienti_tutti(request):
     al_raw = request.GET.get("al", "").strip()
     has_docs = request.GET.get("has_docs", "").strip()     # "si"
     has_prat = request.GET.get("has_prat", "").strip()     # "si"
+    creditore_legale = request.GET.get("creditore_legale", "").strip()
 
     if q:
         qs = qs.filter(
@@ -215,12 +223,17 @@ def clienti_tutti(request):
     if stato in {"active", "inactive", "legal", "stragiudiziale", "instanza"}:
         qs = qs.filter(stato=stato)
 
+    # Filtro date (l'avevi tolto per errore)
     dal = _parse_date(dal_raw)
     al = _parse_date(al_raw)
     if dal:
         qs = qs.filter(data_creazione__date__gte=dal)
     if al:
         qs = qs.filter(data_creazione__date__lte=al)
+
+    # Filtro creditore legale
+    if creditore_legale in dict(CreditoreLegale.choices):
+        qs = qs.filter(creditore_legale=creditore_legale)
 
     if has_docs == "si":
         sub_docs = DocumentoCliente.objects.filter(cliente=OuterRef("pk"))
@@ -250,7 +263,6 @@ def clienti_tutti(request):
     elif sort == "-data_creazione":
         qs = qs.order_by("-data_creazione")
     else:
-        # fallback di sicurezza
         sort = "cognome"
         qs = qs.order_by("cognome", "nome")
 
@@ -270,6 +282,10 @@ def clienti_tutti(request):
         "has_prat": has_prat,
         "sort": sort,
         "per": per_page,
+
+        # filtro creditore
+        "creditore_legale": creditore_legale,
+        "CREDITORI_LEGALI": CreditoreLegale.choices,  # <-- nome corretto (plurale)
     }
     return render(request, "crm/clienti_tutti.html", ctx)
 
@@ -820,12 +836,14 @@ def lead_lista(request):
     # --- Filtri esistenti ---
     q = request.GET.get("q", "").strip()
     stato = request.GET.get("stato", "").strip()
-    dal_raw = request.GET.get("dal", "").strip()
-    al_raw = request.GET.get("al", "").strip()
+    primo_contatto_raw = request.GET.get("primo_contatto", "").strip()
+    appuntamento_raw = request.GET.get("appuntamento", "").strip()
+
 
     stato_operativo = request.GET.get("stato_operativo", "").strip()
     richiamo_da_raw = request.GET.get("richiamo_da", "").strip()
     richiamo_a_raw = request.GET.get("richiamo_a", "").strip()
+    creditore_legale = request.GET.get("creditore_legale", "").strip()
 
     # --- NUOVI FILTRI ---
     provenienza = request.GET.get("provenienza", "").strip()   # 'tiktok' | 'meta' | 'google' | 'passaparola'
@@ -841,15 +859,20 @@ def lead_lista(request):
     if stato in {"in_corso", "negativo", "positivo"}:
         qs = qs.filter(stato=stato)
 
-    dal = _parse_date(dal_raw)
-    al = _parse_date(al_raw)
-    if dal:
-        qs = qs.filter(creato_il__date__gte=dal)
-    if al:
-        qs = qs.filter(creato_il__date__lte=al)
+    primo_contatto = _parse_date(primo_contatto_raw)
+    appuntamento = _parse_date(appuntamento_raw)
+
+    if primo_contatto:
+        qs = qs.filter(primo_contatto__date=primo_contatto)
+
+    if appuntamento:
+        qs = qs.filter(appuntamento_previsto__date=appuntamento)
 
     if stato_operativo in dict(Lead.StatoOperativo.choices):
         qs = qs.filter(stato_operativo=stato_operativo)
+
+    if creditore_legale in dict(CreditoreLegale.choices):
+        qs = qs.filter(creditore_legale=creditore_legale)
 
     richiamo_da = _parse_date(richiamo_da_raw)
     richiamo_a = _parse_date(richiamo_a_raw)
@@ -885,8 +908,14 @@ def lead_lista(request):
         "provenienza": "provenienza", "-provenienza": "-provenienza",
         "consulente": "consulente__nome", "-consulente": "-consulente__nome",
     }
-    sort = sort_map.get(sort_raw, "-creato_il")
-    qs = qs.order_by(sort)
+    sort = sort_map.get(sort_raw, "-primo_contatto")
+    if sort == "-primo_contatto":
+        qs = qs.order_by("-primo_contatto", "-creato_il")
+    elif sort == "primo_contatto":
+        qs = qs.order_by("primo_contatto", "-creato_il")
+    else: 
+        qs = qs.order_by(sort)
+
 
     ha_negativi = qs.filter(stato="negativo").exists()
 
@@ -900,7 +929,9 @@ def lead_lista(request):
     return render(request, "crm/lead_lista.html", {
         "leads": page_obj.object_list,
         "page_obj": page_obj,
-        "q": q, "stato": stato, "dal": dal_raw, "al": al_raw,
+        "q": q, "stato": stato, 
+        "primo_contatto": primo_contatto_raw, 
+        "appuntamento": appuntamento_raw,
         "stato_operativo": stato_operativo,
         "STATI_OPERATIVI": Lead.StatoOperativo.choices,
         "richiamo_da": richiamo_da_raw, "richiamo_a": richiamo_a_raw,
@@ -910,6 +941,8 @@ def lead_lista(request):
         "consulenti": consulenti,
         "PROVENIENZA_CHOICES": Lead.Provenienza.choices,
         "appt": appt,
+        "creditore_legale": creditore_legale,
+        "CREDITORI_LEGALI": CreditoreLegale.choices,
     })
 
 
@@ -1098,6 +1131,129 @@ def scheda_consulenza_dettaglio(request, scheda_id: int):
         "crm/scheda_consulenza_dettaglio.html",  # <-- usa il tuo template esistente
         {"scheda": scheda, "object": scheda, "s": scheda}
     )
+
+@login_required
+@user_passes_test(has_portal_access)
+def scheda_consulenza_pdf(request, scheda_id: int):
+    scheda = get_object_or_404(SchedaConsulenza, pk=scheda_id)
+
+    # Response PDF
+    filename = f"scheda_consulenza_{scheda.id}.pdf"
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    # Canvas
+    p = canvas.Canvas(response, pagesize=A4)
+    width, height = A4
+
+    # Margini
+    left = 18 * mm
+    right = width - 18 * mm
+    top = height - 18 * mm
+    y = top
+
+    # Helpers
+    def new_page():
+        nonlocal y
+        p.showPage()
+        y = top
+        p.setFont("Helvetica", 10)
+
+    def write_line(label, value="", bold=False, gap=7):
+        nonlocal y
+        if y < 20 * mm:
+            new_page()
+
+        txt = f"{label}{value}"
+        p.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
+        p.drawString(left, y, txt)
+        y -= gap * mm
+
+    def write_multiline(label, value, label_bold=True):
+        nonlocal y
+        if value is None:
+            value = "—"
+        value = str(value).strip() or "—"
+
+        # Label
+        if y < 25 * mm:
+            new_page()
+        p.setFont("Helvetica-Bold" if label_bold else "Helvetica", 10)
+        p.drawString(left, y, f"{label}")
+        y -= 6 * mm
+
+        # Testo multilinea con wrap
+        p.setFont("Helvetica", 10)
+        lines = simpleSplit(value, "Helvetica", 10, right - left)
+        for line in lines:
+            if y < 20 * mm:
+                new_page()
+            p.drawString(left, y, line)
+            y -= 5 * mm
+
+        y -= 2 * mm  # spazio extra
+
+    def bool_label(v):
+        return "Sì" if v else "No"
+
+    # Header
+    p.setTitle(f"Scheda Consulenza #{scheda.id}")
+    p.setFont("Helvetica-Bold", 15)
+    p.drawString(left, y, "Scheda di Consulenza")
+    y -= 9 * mm
+
+    p.setFont("Helvetica", 9)
+    p.drawString(left, y, f"ID scheda: {scheda.id}")
+    y -= 5 * mm
+
+    # Riferimento lead/cliente
+    if getattr(scheda, "cliente_id", None):
+        cliente_nome = f"{scheda.cliente.nome} {scheda.cliente.cognome}".strip()
+        write_line("Cliente: ", cliente_nome)
+    elif getattr(scheda, "lead_id", None):
+        lead_nome = f"{scheda.lead.nome} {scheda.lead.cognome}".strip()
+        write_line("Lead: ", lead_nome)
+    else:
+        write_line("Riferimento: ", "—")
+
+    # Metadati
+    compilata_da = getattr(scheda, "compilata_da", None)
+    compilata_da_txt = str(compilata_da) if compilata_da else "—"
+    created_at = getattr(scheda, "created_at", None)
+    created_txt = created_at.strftime("%d/%m/%Y %H:%M") if created_at else "—"
+
+    write_line("Compilata da: ", compilata_da_txt)
+    write_line("Data compilazione: ", created_txt)
+    y -= 2 * mm
+
+    # Riga separatrice
+    p.line(left, y, right, y)
+    y -= 8 * mm
+
+    # Campi scheda (in base al tuo form)
+    write_line("Occupazione: ", getattr(scheda, "occupazione", "") or "—")
+
+    write_multiline("Esposizione patrimoniale", getattr(scheda, "esposizione_patrimoniale", ""))
+    write_multiline("Esposizione finanziaria", getattr(scheda, "esposizione_finanziaria", ""))
+    write_multiline("Obiettivo", getattr(scheda, "obiettivo", ""))
+
+    # Nel form è chiamato "Preventivo" ma il campo sembra essere esposizione_totale
+    write_line("Preventivo: ", str(getattr(scheda, "esposizione_totale", "") or "—"))
+
+    write_line("Cessione del quinto: ", bool_label(getattr(scheda, "ha_cqs", False)))
+    write_line("Equitalia / AER: ", bool_label(getattr(scheda, "ha_equitalia", False)))
+
+    y -= 2 * mm
+    write_multiline("Note", getattr(scheda, "note", ""))
+
+    # Footer
+    if y < 20 * mm:
+        new_page()
+    p.setFont("Helvetica-Oblique", 8)
+    p.drawString(left, 10 * mm, "Debiti Stop · Scheda consulenza generata dal gestionale")
+
+    p.save()
+    return response
 
 @login_required
 @user_passes_test(has_portal_access)

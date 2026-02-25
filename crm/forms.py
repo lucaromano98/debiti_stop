@@ -19,7 +19,8 @@ class ClienteForm(forms.ModelForm):
             "nome", "cognome", "email", "telefono",
             "residenza", "esperienza_finanziaria",
             "note", "stato",
-            "istanza_visibilita", "documenti_inviati", "perizia_inviata",
+            "istanza_visibilita", "documenti_inviati", "perizia_inviata", 
+            "creditore_legale", "creditore_legale_altro"
         ]
         widgets = {
             "nome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
@@ -34,6 +35,20 @@ class ClienteForm(forms.ModelForm):
             "documenti_inviati": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
             "perizia_inviata": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
         }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        creditore_legale = cleaned_data.get("creditore_legale")
+        creditore_legale_altro = (cleaned_data.get("creditore_legale_altro") or "").strip()
+
+        if creditore_legale == "altro" and not creditore_legale_altro:
+            self.add_error("creditore_legale_altro", "Se selezioni 'Altro', devi specificare il nome.")
+
+        # Pulizia dati: se non è 'altro', svuota il campo testo
+        if creditore_legale != "altro":
+            cleaned_data["creditore_legale_altro"] = ""
+
+        return cleaned_data    
 
 
 
@@ -104,6 +119,8 @@ class LeadForm(forms.ModelForm):
         fields = [
             # anagrafica
             "nome", "cognome", "telefono", "email",
+            "creditore_legale", "creditore_legale_altro",
+
             # stato/fasi
             "stato",
             "consulenza_effettuata", "no_risposta", "messaggio_inviato",
@@ -112,6 +129,7 @@ class LeadForm(forms.ModelForm):
             "richiamare_il",
             "motivazione_negativa",
             "note_operatori",
+
             # nuovi campi
             "provenienza", "consulente", "primo_contatto",
         ]
@@ -121,7 +139,16 @@ class LeadForm(forms.ModelForm):
             "telefono": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "email": forms.EmailInput(attrs={"class": "input input-bordered w-full"}),
 
+            "creditore_legale": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "creditore_legale_altro": forms.TextInput(
+                attrs={
+                    "class": "input input-bordered w-full",
+                    "placeholder": "Scrivi il nome del creditore"
+                }
+            ),
+
             "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
+
             "appuntamento_previsto": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
             ),
@@ -154,6 +181,14 @@ class LeadForm(forms.ModelForm):
         if field is not None:
             field.required = False
 
+        field = self.fields.get("creditore_legale")
+        if field is not None:
+            field.required = False
+
+        field = self.fields.get("creditore_legale_altro")
+        if field is not None:
+            field.required = False
+
         field = self.fields.get("primo_contatto")
         if field is not None:
             field.required = False
@@ -165,6 +200,7 @@ class LeadForm(forms.ModelForm):
 
         field = self.fields.get("appuntamento_previsto")
         if field is not None:
+            field.required = False
             field.input_formats = [
                 "%Y-%m-%dT%H:%M",
                 "%Y-%m-%d %H:%M",
@@ -173,6 +209,7 @@ class LeadForm(forms.ModelForm):
 
         field = self.fields.get("richiamare_il")
         if field is not None:
+            field.required = False
             field.input_formats = [
                 "%Y-%m-%dT%H:%M",
                 "%Y-%m-%d %H:%M",
@@ -181,10 +218,24 @@ class LeadForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+
         stato = cleaned.get("stato")
         motivazione_negativa = cleaned.get("motivazione_negativa")
+
         if stato == "negativo" and not motivazione_negativa:
             self.add_error("motivazione_negativa", "Inserisci la motivazione per l’esito negativo.")
+
+        # Validazione creditore "Altro"
+        creditore_legale = cleaned.get("creditore_legale")
+        creditore_legale_altro = (cleaned.get("creditore_legale_altro") or "").strip()
+
+        if creditore_legale == "altro" and not creditore_legale_altro:
+            self.add_error("creditore_legale_altro", "Se selezioni 'Altro', devi specificare il nome.")
+
+        # Se non è "Altro", pulisco il testo libero
+        if creditore_legale != "altro":
+            cleaned["creditore_legale_altro"] = ""
+
         return cleaned
 
 # ========================

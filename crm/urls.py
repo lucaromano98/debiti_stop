@@ -20,7 +20,7 @@ from .views import (
     lead_toggle_consulenza, lead_toggle_no_risposta, lead_toggle_msg, lead_aggiorna_stato_operativo,
     # schede consulenza
     scheda_consulenza_nuova, scheda_consulenza_dettaglio,
-    scheda_consulenza_modifica, scheda_consulenza_elimina,
+    scheda_consulenza_modifica, scheda_consulenza_elimina, scheda_consulenza_pdf,
     # notifiche
     notifiche_segna_letto, notifiche_segna_tutte_lette, notifiche_lista,
 )
@@ -95,10 +95,13 @@ urlpatterns = [
     path("clienti/<int:cliente_id>/consulenza/nuova/", scheda_consulenza_nuova, name="scheda_consulenza_nuova"),
     # — crea per LEAD
     path("leads/<int:lead_id>/consulenza/nuova/", scheda_consulenza_nuova, name="scheda_consulenza_nuova_lead"),
-    # — dettaglio / edit / delete (un solo set con 'scheda_id')
+    # — dettaglio / edit / delete (un solo set con 'scheda_id'), pdf
     path("consulenze/<int:scheda_id>/", scheda_consulenza_dettaglio, name="scheda_consulenza_dettaglio"),
     path("consulenze/<int:scheda_id>/modifica/", scheda_consulenza_modifica, name="scheda_consulenza_modifica"),
     path("consulenze/<int:scheda_id>/elimina/", scheda_consulenza_elimina, name="scheda_consulenza_elimina"),
+    path("schede-consulenza/<int:scheda_id>/pdf/", scheda_consulenza_pdf, name="scheda_consulenza_pdf"),
+
+    
 
     # Notifiche
     path("notifiche/<int:notifica_id>/letto/", notifiche_segna_letto, name="notifiche_segna_letto"),

@@ -83,6 +83,21 @@
           </label>
         </div>
 
+        <!-- Creditore legale -->
+          <div class="grid gap-4 md:grid-cols-2">
+            <label class="form-control">
+              <div class="label"><span class="label-text">Creditore legale</span></div>
+              {{ form.creditore_legale }}
+              {% for err in form.creditore_legale.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+            </label>
+
+            <label class="form-control" id="creditore-legale-altro-wrap">
+              <div class="label"><span class="label-text">Altro - scrivi nome</span></div>
+              {{ form.creditore_legale_altro }}
+              {% for err in form.creditore_legale_altro.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+            </label>
+          </div>
+
         <!-- Allegati · Visure (multi upload fuori dal form) -->
         <div class="space-y-2">
           <div class="label p-0"><span class="label-text">Allegati · Visure</span></div>
@@ -192,6 +207,28 @@
     function sync(){ extra.classList.toggle("hidden", !chk.checked); }
     chk.addEventListener("change", sync);
     sync();
+  })();
+</script>
+
+<!-- JS: Creditore Legale -->
+<script>
+  (function () {
+    const select = document.getElementById("id_creditore_legale");
+    const wrap = document.getElementById("creditore-legale-altro-wrap");
+    const input = document.getElementById("id_creditore_legale_altro");
+
+    if (!select || !wrap) return;
+
+    function syncCreditoreAltro() {
+      const isAltro = select.value === "altro";
+      wrap.classList.toggle("hidden", !isAltro);
+
+      // se non è "altro", pulisco il campo per evitare salvataggi sporchi
+      if (!isAltro && input) input.value = "";
+    }
+
+    select.addEventListener("change", syncCreditoreAltro);
+    syncCreditoreAltro(); // stato iniziale (utile in modifica cliente)
   })();
 </script>
 {% endblock %}

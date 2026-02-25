@@ -32,6 +32,15 @@
           </div>
         </div>
 
+        <div>
+          <span class="font-semibold">Creditore legale:</span>
+          {% if lead.creditore_legale == "altro" and lead.creditore_legale_altro %}
+            {{ lead.creditore_legale_altro }}
+          {% else %}
+            {{ lead.get_creditore_legale_display|default:"—" }}
+          {% endif %}
+        </div>
+
         <div class="flex flex-wrap items-center gap-2">
           <a href="{% url 'lead_modifica' lead.id %}" class="btn btn-ghost">✏️ Modifica</a>
           <a href="{% url 'lead_lista' %}" class="btn">⬅️ Torna alla lista</a>
@@ -40,7 +49,6 @@
     </div>
   </div>
 
-  <!-- AZIONI RAPIDE -->
 <!-- AZIONI RAPIDE -->
 <div class="card bg-base-100 shadow">
   <div class="card-body gap-4">
