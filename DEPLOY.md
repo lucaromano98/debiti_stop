@@ -11,7 +11,8 @@ Imposta queste variabili sul server o sul pannello del servizio di hosting:
 | `SECRET_KEY`    | Sì          | Stringa lunga e casuale (es. generata con `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`) |
 | `DEBUG`         | No          | `False` in produzione |
 | `ALLOWED_HOSTS` | No          | `db-backoffice.it,www.db-backoffice.it` (separati da virgola, senza spazi) |
-| `DATABASE_URL`  | Se usi DB remoto | URL tipo `mysql://user:password@host:3306/dbname` oppure `postgres://...`; se non impostata si usa SQLite |
+| `DATABASE_URL`  | Se usi DB remoto | URL tipo `mysql://user:password@host:3306/nome_db` (il nome dopo la barra è il database). |
+| `DATABASE_NAME` | No          | Se il database si chiama diversamente dall’URL (es. `defaultdb`), imposta qui il nome reale, es. `defaultdb`. |
 
 Per sviluppo in locale puoi usare un file `.env` nella cartella `back_end` (non committare `.env` se contiene segreti).
 

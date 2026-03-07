@@ -112,6 +112,8 @@ WSGI_APPLICATION = 'debiti_stop.wsgi.application'
 DATABASES = {}
 if os.environ.get("DATABASE_URL"):
     DATABASES["default"] = dj_database_url.config(conn_max_age=600, conn_health_checks=True)
+    if os.environ.get("DATABASE_NAME"):
+        DATABASES["default"]["NAME"] = os.environ.get("DATABASE_NAME")
 else:
     DATABASES["default"] = {
         "ENGINE": "django.db.backends.sqlite3",
