@@ -117,36 +117,19 @@ class LeadForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
-            # anagrafica
             "nome", "cognome", "telefono", "email",
-            "creditore_legale", "creditore_legale_altro",
-
-            # stato/fasi
             "stato",
             "consulenza_effettuata", "no_risposta", "messaggio_inviato",
             "in_acquisizione",
-            "appuntamento_previsto",
-            "richiamare_il",
-            "motivazione_negativa",
-            "note_operatori",
-
-            # nuovi campi
-            "provenienza", "consulente", "primo_contatto",
+            "appuntamento_previsto", "richiamare_il",
+            "motivazione_negativa", "note_operatori",
+            "consulente", "primo_contatto",
         ]
         widgets = {
             "nome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "cognome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "telefono": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "email": forms.EmailInput(attrs={"class": "input input-bordered w-full"}),
-
-            "creditore_legale": forms.Select(attrs={"class": "select select-bordered w-full"}),
-            "creditore_legale_altro": forms.TextInput(
-                attrs={
-                    "class": "input input-bordered w-full",
-                    "placeholder": "Scrivi il nome del creditore"
-                }
-            ),
-
             "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
 
             "appuntamento_previsto": forms.DateTimeInput(
@@ -162,7 +145,6 @@ class LeadForm(forms.ModelForm):
                 attrs={"rows": 3, "class": "textarea textarea-bordered w-full"}
             ),
 
-            "provenienza": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "consulente": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "primo_contatto": forms.DateTimeInput(
                 attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
@@ -177,17 +159,10 @@ class LeadForm(forms.ModelForm):
             field.queryset = Consulente.objects.filter(is_active=True).order_by("nome")
             field.required = False
 
-        field = self.fields.get("provenienza")
-        if field is not None:
-            field.required = False
-
-        field = self.fields.get("creditore_legale")
-        if field is not None:
-            field.required = False
-
-        field = self.fields.get("creditore_legale_altro")
-        if field is not None:
-            field.required = False
+        for fname in ("nome", "cognome"):
+            field = self.fields.get(fname)
+            if field is not None:
+                field.required = False
 
         field = self.fields.get("primo_contatto")
         if field is not None:
@@ -225,18 +200,18 @@ class LeadForm(forms.ModelForm):
         if stato == "negativo" and not motivazione_negativa:
             self.add_error("motivazione_negativa", "Inserisci la motivazione per l’esito negativo.")
 
-        # Validazione creditore "Altro"
-        creditore_legale = cleaned.get("creditore_legale")
-        creditore_legale_altro = (cleaned.get("creditore_legale_altro") or "").strip()
-
-        if creditore_legale == "altro" and not creditore_legale_altro:
-            self.add_error("creditore_legale_altro", "Se selezioni 'Altro', devi specificare il nome.")
-
-        # Se non è "Altro", pulisco il testo libero
-        if creditore_legale != "altro":
-            cleaned["creditore_legale_altro"] = ""
-
         return cleaned
+
+    def clean_telefono(self):
+        telefono = (self.cleaned_data.get("telefono") or "").strip()
+        if not telefono:
+            return telefono or None
+        qs = Lead.objects.filter(telefono=telefono, is_archiviato=False)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("Un lead con questo numero di cellulare esiste già.")
+        return telefono or None
 
 # ========================
 # SchedaConsulenza

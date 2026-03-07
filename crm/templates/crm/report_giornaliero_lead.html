@@ -1,0 +1,364 @@
+{% extends "crm/base.html" %}
+{% load static %}
+{% block title %}Dashboard Lead · Debiti Stop{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Light: cozy arancione, senza bordi bianchi */
+  .dashboard-card {
+    font-variant-numeric: tabular-nums;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(180, 83, 9, 0.08);
+    background: linear-gradient(135deg, rgba(255, 247, 237, 0.98) 0%, rgba(255, 251, 235, 0.95) 100%);
+  }
+  .dark .dashboard-card {
+    background: rgba(30, 41, 59, 0.65);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+  .kpi-value { font-variant-numeric: tabular-nums; }
+  .report-table thead th { border-color: rgba(180, 83, 9, 0.2); }
+  .report-table tbody td { border-color: rgba(180, 83, 9, 0.1); }
+  .dark .report-table thead th { border-color: rgba(148, 163, 184, 0.2); }
+  .dark .report-table tbody td { border-color: rgba(148, 163, 184, 0.1); }
+  /* Legenda grafico donut - evita troncamento testo */
+  .distribuzione-chart-wrap { min-width: min(100%, 12rem); }
+  .distribuzione-chart-wrap .chartjs-legend { flex-wrap: wrap; }
+  .distribuzione-chart-wrap .chartjs-legend li { white-space: nowrap; }
+  /* Colori pallini lista - allineati alla legenda del donut (light) */
+  :root { --dc-0:#d97706; --dc-1:#ea580c; --dc-2:#f59e0b; --dc-3:#fbbf24; --dc-4:#f97316; --dc-5:#fb923c; --dc-6:#fdba74; --dc-7:#fcd34d; }
+  .dark { --dc-0:#3b82f6; --dc-1:#f59e0b; --dc-2:#10b981; --dc-3:#8b5cf6; --dc-4:#ef4444; --dc-5:#06b6d4; --dc-6:#ec4899; --dc-7:#6366f1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] rounded-2xl bg-amber-50/40 px-4 py-6 sm:px-6 sm:py-8 dark:bg-transparent">
+<div class="mx-auto max-w-7xl space-y-6 px-3 sm:px-4">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold tracking-tight text-amber-900 dark:text-slate-100">
+        Dashboard Lead
+      </h1>
+      <p class="mt-1 text-sm font-medium text-amber-800/80 dark:text-slate-400">
+        Report del {{ data_report|date:"d/m/Y" }} — Vista admin
+      </p>
+    </div>
+    <a href="{% url 'lead_lista' %}" class="btn btn-ghost gap-2">
+      <i data-lucide="arrow-left" class="w-5 h-5 inline-block align-middle"></i>
+      Torna ai lead
+    </a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+    <div class="dashboard-card overflow-hidden p-6">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0 flex-1 pl-4">
+          <p class="text-sm font-semibold text-amber-900/80 dark:text-slate-400">Lead oggi</p>
+          <p class="mt-2 text-3xl font-extrabold kpi-value text-amber-900 dark:text-slate-100">
+            {{ totale_oggi }}
+          </p>
+          {% if delta_ieri != 0 %}
+          <p class="mt-1.5 text-sm font-medium {% if delta_ieri > 0 %}text-emerald-700 dark:text-emerald-400{% else %}text-amber-700 dark:text-amber-400{% endif %}">
+            {{ delta_ieri|default:0|add:0 }}{% if delta_ieri > 0 %}+{% endif %} vs ieri
+          </p>
+          {% else %}
+          <p class="mt-1.5 text-sm font-medium text-amber-800/70 dark:text-slate-400">Uguale a ieri</p>
+          {% endif %}
+        </div>
+        <div class="rounded-xl bg-amber-200/70 p-3 dark:bg-amber-900/30">
+          <svg class="h-8 w-8 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-card overflow-hidden p-6">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0 flex-1 pl-4">
+          <p class="text-sm font-semibold text-amber-900/80 dark:text-slate-400">Lead attivi totali</p>
+          <p class="mt-2 text-3xl font-extrabold kpi-value text-amber-900 dark:text-slate-100">
+            {{ totale_attivi }}
+          </p>
+          <p class="mt-1.5 text-sm font-medium text-amber-800/70 dark:text-slate-400">Non archiviati</p>
+        </div>
+        <div class="rounded-xl bg-amber-200/70 p-3 dark:bg-amber-900/30">
+          <svg class="h-8 w-8 text-amber-700 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-card overflow-hidden p-6">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0 flex-1 pl-4">
+          <p class="text-sm font-semibold text-amber-900/80 dark:text-slate-400">Ieri</p>
+          <p class="mt-2 text-3xl font-extrabold kpi-value text-amber-900 dark:text-slate-100">
+            {{ totale_ieri }}
+          </p>
+          <p class="mt-1.5 text-sm font-medium text-amber-800/70 dark:text-slate-400">Lead creati</p>
+        </div>
+        <div class="rounded-xl bg-amber-100/80 p-3 dark:bg-slate-800/50">
+          <svg class="h-8 w-8 text-amber-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-card overflow-hidden p-6">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0 flex-1 pl-4">
+          <p class="text-sm font-semibold text-amber-900/80 dark:text-slate-400">Stati</p>
+          <p class="mt-2 text-3xl font-extrabold kpi-value text-amber-900 dark:text-slate-100">
+            {{ stats_stato|length }}
+          </p>
+          <p class="mt-1.5 text-sm font-medium text-amber-800/70 dark:text-slate-400">Lavorazione</p>
+        </div>
+        <div class="rounded-xl bg-amber-200/70 p-3 dark:bg-amber-900/30">
+          <svg class="h-8 w-8 text-amber-700 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="grid gap-8 lg:grid-cols-2 lg:gap-10 pt-6 mb-8">
+    <!-- Trend 7 giorni -->
+    <div class="dashboard-card rounded-xl p-6 mb-6 shadow-lg">
+      <h3 class="text-lg font-bold text-amber-900 dark:text-slate-100">Trend ultimi 7 giorni</h3>
+      <p class="mt-1 text-sm font-medium text-amber-800/80 dark:text-slate-400">Lead creati per giorno</p>
+      <div class="mt-4 h-40 w-full">
+        <canvas id="chartTrend" aria-label="Trend lead"></canvas>
+      </div>
+    </div>
+
+    <!-- Distribuzione per stato -->
+    <div class="dashboard-card rounded-xl p-6 mb-6 shadow-lg">
+      <h3 class="text-lg font-bold text-amber-900 dark:text-slate-100">Distribuzione oggi</h3>
+      <p class="mt-1 text-sm font-medium text-amber-800/80 dark:text-slate-400">Lead di oggi per stato lavorazione</p>
+      <div class="mt-4 max-w-2xl mx-auto">
+        <div class="flex flex-col md:flex-row flex-wrap items-center justify-center gap-8">
+          <div class="distribuzione-chart-wrap w-48 max-w-48 shrink-0">
+            <div class="relative w-48 h-48">
+              <canvas id="chartStati" aria-label="Stati lavorazione"></canvas>
+            </div>
+          </div>
+          <div class="max-w-sm shrink-0 space-y-1">
+            {% for label, count in stats_stato %}
+            {% if count > 0 %}
+            <div class="flex items-center justify-between gap-4 py-2 rounded-lg bg-amber-50/80 px-3 dark:bg-slate-800/50">
+              <span class="flex items-center gap-2 min-w-0 flex-1">
+                <span class="w-3 h-3 rounded-full inline-block shrink-0 mr-2" style="background-color: var(--dc-{{ forloop.counter0 }})"></span>
+                <span class="text-sm font-semibold text-amber-900 dark:text-slate-300 truncate">{{ label }}</span>
+              </span>
+              <span class="text-sm font-medium text-amber-800/90 dark:text-slate-400 tabular-nums shrink-0">{{ count }}{% if totale_oggi > 0 %} ({% widthratio count totale_oggi 100 %}%){% endif %}</span>
+            </div>
+            {% endif %}
+          {% empty %}
+          <p class="text-sm text-slate-500">Nessun lead oggi</p>
+          {% endfor %}
+          {% if totale_oggi == 0 and stats_stato %}
+          <p class="text-sm text-slate-500">Nessun lead oggi</p>
+          {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabella stati (compatto) -->
+  <div class="dashboard-card overflow-hidden rounded-xl p-6 mb-6 shadow-lg">
+    <div class="pb-4">
+      <h3 class="text-lg font-bold text-amber-900 dark:text-slate-100">Dettaglio per stato</h3>
+      <p class="mt-2 text-sm font-medium text-amber-800/80 dark:text-slate-400">Lead creati oggi</p>
+    </div>
+    <div class="overflow-x-auto px-2 pb-4 sm:px-4 sm:pb-6">
+      <table class="table table-zebra report-table min-w-full">
+        <thead>
+          <tr>
+            <th class="font-semibold text-amber-900 dark:text-slate-200">Stato</th>
+            <th class="text-right font-semibold text-amber-900 dark:text-slate-200">Numero</th>
+            <th class="w-32 text-right font-semibold text-amber-900 dark:text-slate-200">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for label, count in stats_stato %}
+          <tr class="{% if count == 0 %}opacity-30 text-gray-500 dark:text-slate-500{% endif %}">
+            <td class="font-semibold text-amber-900 dark:text-slate-200">{{ label }}</td>
+            <td class="text-right font-semibold text-amber-900 dark:text-slate-100">{{ count }}</td>
+            <td class="text-right font-medium text-amber-800/80 dark:text-slate-400">
+              {% if totale_oggi > 0 %}{% widthratio count totale_oggi 100 %}%{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center font-medium text-amber-800/80 dark:text-slate-400 py-8">Nessun lead creato oggi</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+(function() {
+  // #region agent log
+  const _log = function(h, msg, d) {
+    try {
+      fetch('http://127.0.0.1:7316/ingest/e8b4c34f-655e-4d23-b1a3-dd772670d891',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'91295b'},body:JSON.stringify({sessionId:'91295b',hypothesisId:h,location:'report_giornaliero_lead.html',message:msg,data:d||{},timestamp:Date.now()})}).catch(function(){});
+    } catch(e) {}
+  };
+  // #endregion
+
+  const TREND_LABELS = [{% for l in trend_labels %}'{{ l|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const TREND_VALUES = [{% for v in trend_values %}{{ v }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const STATI_LABELS = [{% for label, count in stats_stato %}'{{ label|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+  const STATI_VALUES = [{% for label, count in stats_stato %}{{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+  _log('H1','ChartDataLabels check',{defined:typeof ChartDataLabels!=='undefined'});
+  if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+  let chartTrend = null;
+  let chartStati = null;
+
+  function getChartColors() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return {
+      isDark: isDark,
+      grid: isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(180, 83, 9, 0.12)',
+      text: isDark ? '#94a3b8' : '#78350f',
+      barBg: isDark ? 'rgba(59, 130, 246, 0.6)' : 'rgba(245, 158, 11, 0.7)',
+      barBorder: isDark ? '#3b82f6' : '#d97706',
+      colors: isDark
+        ? ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#6366f1']
+        : ['#d97706', '#ea580c', '#f59e0b', '#fbbf24', '#f97316', '#fb923c', '#fdba74', '#fcd34d'],
+      datalabelsColor: isDark ? '#fff' : 'rgba(0,0,0,0.85)'
+    };
+  }
+
+  function renderCharts() {
+    // #region agent log
+    _log('H3','renderCharts enter',{});
+    // #endregion
+    try {
+    const c = getChartColors();
+
+    if (chartTrend) chartTrend.destroy();
+    const ctxTrend = document.getElementById('chartTrend');
+    if (ctxTrend) {
+      chartTrend = new Chart(ctxTrend, {
+        type: 'bar',
+        data: {
+          labels: TREND_LABELS,
+          datasets: [{
+            label: 'Lead creati',
+            data: TREND_VALUES,
+            backgroundColor: c.barBg,
+            borderColor: c.barBorder,
+            borderWidth: 1,
+            borderRadius: 8,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { color: c.text }, grid: { color: c.grid } },
+            x: { ticks: { color: c.text }, grid: { color: c.grid } }
+          }
+        }
+      });
+    }
+
+    if (chartStati) chartStati.destroy();
+    const ctxStati = document.getElementById('chartStati');
+    if (ctxStati) {
+      const totalStati = STATI_VALUES.reduce((a, b) => a + b, 0);
+      const indices = STATI_VALUES.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0);
+      const chartLabels = indices.map(i => STATI_LABELS[i]);
+      const chartValues = indices.map(i => STATI_VALUES[i]);
+      const chartColors = indices.map(i => c.colors[i % c.colors.length]);
+      // #region agent log
+      _log('H2','Stati chart data',{totalStati:totalStati,indicesLen:indices.length,chartLabelsLen:chartLabels.length,chartValuesLen:chartValues.length,ChartDataLabelsDefined:typeof ChartDataLabels!=='undefined'});
+      // #endregion
+
+      chartStati = new Chart(ctxStati, {
+        type: 'doughnut',
+        data: {
+          labels: chartLabels.length ? chartLabels : ['Nessun lead'],
+          datasets: [{
+            data: chartValues.length ? chartValues : [1],
+            backgroundColor: chartColors.length ? chartColors : [c.grid],
+            borderWidth: 0
+          }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '55%',
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                color: c.text,
+                padding: 10,
+                usePointStyle: true,
+                pointStyle: 'circle',
+                boxWidth: 10,
+                font: { size: 12 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const tot = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = tot ? ((ctx.raw / tot) * 100).toFixed(1) : 0;
+                  return ctx.label + ': ' + ctx.raw + ' (' + pct + '%)';
+                }
+              }
+            },
+            datalabels: {
+              display: chartValues.length && totalStati > 0,
+              formatter: function(val, ctx) {
+                const tot = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                return tot ? ((val / tot) * 100).toFixed(0) + '%' : '';
+              },
+              color: c.datalabelsColor,
+              font: { size: 11, weight: 'bold' }
+            }
+          }
+        }
+      });
+    }
+    // #region agent log
+    _log('H3','renderCharts success',{});
+    // #endregion
+    } catch (err) {
+      // #region agent log
+      _log('H3','renderCharts ERROR',{error:String(err),stack:(err&&err.stack)||''});
+      // #endregion
+      throw err;
+    }
+  }
+
+  // #region agent log
+  _log('H4','before renderCharts',{TREND_LABELS_len:TREND_LABELS.length,STATI_LABELS_len:STATI_LABELS.length});
+  // #endregion
+  try { renderCharts(); } catch (e) { _log('H4','renderCharts throw',{err:String(e)}); }
+  window.addEventListener('themechange', renderCharts);
+})();
+</script>
+{% endblock %}

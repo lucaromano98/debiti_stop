@@ -21,9 +21,7 @@
           </h1>
 
           <div class="mt-2 grid gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3 text-sm">
-            <div><span class="font-semibold">Email:</span> {{ lead.email|default:"—" }}</div>
             <div><span class="font-semibold">Telefono:</span> {{ lead.telefono|default:"—" }}</div>
-            <div><span class="font-semibold">Provenienza:</span> {{ lead.get_provenienza_display|default:"—" }}</div>
             <div><span class="font-semibold">Consulente:</span> {{ lead.consulente|default:"—" }}</div>
             <div><span class="font-semibold">Creato:</span> {{ lead.creato_il|date:"d/m/Y H:i" }}</div>
             <div><span class="font-semibold">Primo contatto:</span> {% if lead.primo_contatto %}{{ lead.primo_contatto|date:"d/m/Y H:i" }}{% else %}—{% endif %}</div>
@@ -32,18 +30,15 @@
           </div>
         </div>
 
-        <div>
-          <span class="font-semibold">Creditore legale:</span>
-          {% if lead.creditore_legale == "altro" and lead.creditore_legale_altro %}
-            {{ lead.creditore_legale_altro }}
-          {% else %}
-            {{ lead.get_creditore_legale_display|default:"—" }}
-          {% endif %}
-        </div>
-
         <div class="flex flex-wrap items-center gap-2">
-          <a href="{% url 'lead_modifica' lead.id %}" class="btn btn-ghost">✏️ Modifica</a>
-          <a href="{% url 'lead_lista' %}" class="btn">⬅️ Torna alla lista</a>
+          <a href="{% url 'lead_modifica' lead.id %}" class="btn btn-ghost"><i data-lucide="pencil" class="w-5 h-5 inline-block align-middle mr-1"></i>Modifica</a>
+          <a href="{% url 'lead_lista_stato' stato_slug='non-contattare' %}" class="btn btn-ghost"><i data-lucide="clipboard-list" class="w-5 h-5 inline-block align-middle mr-1"></i>Non contattare</a>
+          <a href="{% url 'lead_lista' %}" class="btn"><i data-lucide="arrow-left" class="w-5 h-5 inline-block align-middle mr-1"></i>Torna alla lista</a>
+          <form method="post" action="{% url 'lead_elimina' lead.id %}" class="inline"
+                onsubmit="return confirm('Eliminare definitivamente questo lead?');">
+            {% csrf_token %}
+            <button class="btn btn-outline btn-error" type="submit">Elimina lead</button>
+          </form>
         </div>
       </div>
     </div>
@@ -61,14 +56,16 @@
           <span class="badge badge-success badge-outline">Consulenza effettuata</span>
         {% elif lead.stato_operativo == 'no_risposta' %}
           <span class="badge badge-warning badge-outline">Senza risposta</span>
-        {% elif lead.stato_operativo == 'msg_inviato' %}
-          <span class="badge badge-info badge-outline">Messaggio inviato</span>
-        {% elif lead.stato_operativo == 'in_acquisizione' %}
-          <span class="badge badge-primary badge-outline">In acquisizione</span>
+        {% elif lead.stato_operativo == 'segreteria' %}
+          <span class="badge badge-info badge-outline">Segreteria</span>
+        {% elif lead.stato_operativo == 'ha_staccato_lui' %}
+          <span class="badge badge-primary badge-outline">Ha staccato lui</span>
         {% elif lead.stato_operativo == 'non_competenza' %}
           <span class="badge badge-neutral badge-outline">Attività non di competenza</span>
         {% elif lead.stato_operativo == 'attesa_contatti' %}
           <span class="badge badge-accent badge-outline">Attesa contatti cliente</span>
+        {% elif lead.stato_operativo == 'non_contattare' %}
+          <span class="badge badge-ghost badge-outline">Non contattare</span>
         {% else %}
           <span class="badge badge-ghost">Nuovo</span>
         {% endif %}
@@ -90,6 +87,15 @@
         </div>
         <button class="btn btn-primary btn-sm" type="submit">Salva stato</button>
       </form>
+
+      {% if lead.stato_operativo != 'non_contattare' %}
+      <form method="post" action="{% url 'lead_ricontatta' lead.id %}" class="inline">
+        {% csrf_token %}
+        <button class="btn btn-outline btn-warning btn-sm" type="submit">
+          Ricontattato ({{ lead.ricontatti_count|default:0 }}/3)
+        </button>
+      </form>
+      {% endif %}
     </div>
 
     {% if lead.motivazione_negativa %}

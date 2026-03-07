@@ -56,9 +56,9 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <a href="{% url 'cliente_modifica' cliente.id %}" class="btn btn-ghost">✏️ Modifica</a>
-          <a href="{% url 'cliente_elimina' cliente.id %}" class="btn btn-outline">🗑️ Elimina</a>
-          <a href="{% url 'clienti_tutti' %}" class="btn">⬅️ Torna alla lista</a>
+          <a href="{% url 'cliente_modifica' cliente.id %}" class="btn btn-ghost"><i data-lucide="pencil" class="w-5 h-5 inline-block align-middle mr-1"></i>Modifica</a>
+          <a href="{% url 'cliente_elimina' cliente.id %}" class="btn btn-outline"><i data-lucide="trash-2" class="w-5 h-5 inline-block align-middle mr-1"></i>Elimina</a>
+          <a href="{% url 'clienti_tutti' %}" class="btn"><i data-lucide="arrow-left" class="w-5 h-5 inline-block align-middle mr-1"></i>Torna alla lista</a>
         </div>
       </div>
     </div>

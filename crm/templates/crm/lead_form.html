@@ -9,7 +9,7 @@
       <p class="text-sm text-slate-500 dark:text-slate-400">Leads</p>
       <h1 class="text-2xl font-extrabold tracking-tight">{% if is_edit %}Modifica Lead{% else %}Nuovo Lead{% endif %}</h1>
     </div>
-    <a href="{% url 'lead_lista' %}" class="btn btn-ghost">⟵ Torna alla lista</a>
+    <a href="{% url 'lead_lista' %}" class="btn btn-ghost"><i data-lucide="arrow-left" class="w-5 h-5 inline-block align-middle mr-1"></i>Torna alla lista</a>
   </div>
 
   <!-- Card -->
@@ -42,14 +42,14 @@
             {% endif %}
           </div>
 
-          <!-- Telefono -->
+          <!-- Telefono (obbligatorio per controllo duplicati) -->
           <div class="form-control">
             <label class="label" for="{{ form.telefono.id_for_label }}">
               <span class="label-text">Telefono</span>
             </label>
             {{ form.telefono }}
             {% if form.telefono.errors %}
-              <div class="alert alert-error mt-2 py-2">{{ form.telefono.errors }}</div>
+              <div class="alert alert-warning mt-2 py-2">{{ form.telefono.errors }}</div>
             {% endif %}
           </div>
 
@@ -61,28 +61,6 @@
             {{ form.email }}
             {% if form.email.errors %}
               <div class="alert alert-error mt-2 py-2">{{ form.email.errors }}</div>
-            {% endif %}
-          </div>
-
-          <!-- Creditore legale (TENDINA) -->
-          <div class="form-control">
-            <label class="label" for="{{ form.creditore_legale.id_for_label }}">
-              <span class="label-text">Creditore legale</span>
-            </label>
-            {{ form.creditore_legale }}
-            {% if form.creditore_legale.errors %}
-              <div class="alert alert-error mt-2 py-2">{{ form.creditore_legale.errors }}</div>
-            {% endif %}
-          </div>
-
-          <!-- Altro creditore (visibile solo se "Altro") -->
-          <div id="creditore-altro-wrap" class="form-control hidden">
-            <label class="label" for="{{ form.creditore_legale_altro.id_for_label }}">
-              <span class="label-text">Altro creditore (specifica)</span>
-            </label>
-            {{ form.creditore_legale_altro }}
-            {% if form.creditore_legale_altro.errors %}
-              <div class="alert alert-error mt-2 py-2">{{ form.creditore_legale_altro.errors }}</div>
             {% endif %}
           </div>
 
@@ -98,24 +76,14 @@
           </div>
         </div>
 
-        <!-- Provenienza + Consulente -->
-        <div class="grid gap-3 md:grid-cols-2">
-          <label class="form-control">
-            <div class="label"><span class="label-text">Provenienza</span></div>
-            {{ form.provenienza }}
-            {% if form.provenienza.errors %}
-              <div class="alert alert-error mt-2 py-2">{{ form.provenienza.errors }}</div>
-            {% endif %}
-          </label>
-
-          <label class="form-control">
-            <div class="label"><span class="label-text">Chi farà la consulenza?</span></div>
-            {{ form.consulente }}
-            {% if form.consulente.errors %}
-              <div class="alert alert-error mt-2 py-2">{{ form.consulente.errors }}</div>
-            {% endif %}
-          </label>
-        </div>
+        <!-- Consulente -->
+        <label class="form-control">
+          <div class="label"><span class="label-text">Chi farà la consulenza?</span></div>
+          {{ form.consulente }}
+          {% if form.consulente.errors %}
+            <div class="alert alert-error mt-2 py-2">{{ form.consulente.errors }}</div>
+          {% endif %}
+        </label>
 
         <!-- Primo contatto -->
         <label class="form-control">
@@ -199,21 +167,6 @@
       stato.addEventListener("change", toggleBlocks);
     }
 
-    const sel = document.getElementById("id_creditore_legale");
-    const wrap = document.getElementById("creditore-altro-wrap");
-    const input = document.getElementById("id_creditore_legale_altro");
-
-    function syncCreditoreAltro() {
-      if (!sel || !wrap) return;
-      const isAltro = sel.value === "altro";
-      wrap.classList.toggle("hidden", !isAltro);
-      if (!isAltro && input) input.value = "";
-    }
-
-    if (sel) {
-      syncCreditoreAltro();
-      sel.addEventListener("change", syncCreditoreAltro);
-    }
   })();
 </script>
 {% endblock %}

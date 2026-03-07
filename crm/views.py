@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q, Exists, OuterRef
+from django.db.models import Q, Exists, OuterRef, Case, When, Value, IntegerField
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -149,6 +149,9 @@ def _appt_range(key: str, base: date | None = None):
         return start, end
     if key == "next7":
         return d, d + timedelta(days=7)
+    if key == "yesterday":
+        yd = d - timedelta(days=1)
+        return yd, yd
     return None, None
 
 
@@ -189,6 +192,44 @@ def is_admin(user):
         return True
     prof = getattr(user, "profiloutente", None)
     return bool(prof and prof.ruolo == "admin")
+
+
+@login_required
+@user_passes_test(is_admin)
+def report_giornaliero_lead(request):
+    """Dashboard statistiche lead, solo admin."""
+    oggi = timezone.localdate()
+    qs_oggi = Lead.objects.filter(is_archiviato=False, creato_il__date=oggi)
+    qs_tutti = Lead.objects.filter(is_archiviato=False)
+
+    # Statistiche per stato (solo lead creati oggi)
+    stats = [(label, qs_oggi.filter(stato_operativo=val).count()) for val, label in Lead.StatoOperativo.choices]
+
+    # Trend ultimi 7 giorni (lead creati per giorno)
+    trend_labels = []
+    trend_values = []
+    for i in range(6, -1, -1):
+        d = oggi - timedelta(days=i)
+        cnt = Lead.objects.filter(is_archiviato=False, creato_il__date=d).count()
+        trend_labels.append(d.strftime("%d/%m"))
+        trend_values.append(cnt)
+
+    # Ieri per confronto
+    ieri = oggi - timedelta(days=1)
+    totale_ieri = Lead.objects.filter(is_archiviato=False, creato_il__date=ieri).count()
+    totale_oggi = qs_oggi.count()
+    delta_ieri = totale_oggi - totale_ieri if totale_ieri else totale_oggi
+
+    return render(request, "crm/report_giornaliero_lead.html", {
+        "data_report": oggi,
+        "totale_oggi": totale_oggi,
+        "totale_attivi": qs_tutti.count(),
+        "stats_stato": stats,
+        "trend_labels": trend_labels,
+        "trend_values": trend_values,
+        "delta_ieri": delta_ieri,
+        "totale_ieri": totale_ieri,
+    })
 
 
 # ==============================
@@ -828,26 +869,48 @@ def nota_elimina(request, nota_id):
 # ==============================
 # Lead – lista/filtri/CRUD
 # ==============================
+# Mappa slug URL -> valore stato_operativo
+STATO_SLUG_MAP = {
+    "nuovo": "nuovo",
+    "no-risposta": "no_risposta",
+    "segreteria": "segreteria",
+    "ha-staccato-lui": "ha_staccato_lui",
+    "consulenza-effettuata": "consulenza_eff",
+    "non-competenza": "non_competenza",
+    "attesa-contatti": "attesa_contatti",
+    "non-contattare": "non_contattare",
+}
+
+
 @login_required
 @user_passes_test(has_portal_access)
-def lead_lista(request):
+def lead_lista(request, stato_slug=None):
     qs = Lead.objects.filter(is_archiviato=False).select_related("consulente")
 
-    # --- Filtri esistenti ---
+    stato_vista = None
+    stato_vista_label = None
+    stato_slug_actual = None
+    if stato_slug and stato_slug in STATO_SLUG_MAP:
+        stato_operativo_forzato = STATO_SLUG_MAP[stato_slug]
+        qs = qs.filter(stato_operativo=stato_operativo_forzato)
+        stato_vista = stato_operativo_forzato
+        stato_vista_label = dict(Lead.StatoOperativo.choices).get(stato_operativo_forzato, stato_slug)
+        stato_slug_actual = stato_slug
+    else:
+        # Nella lista generale escludi i "Non contattare"
+        qs = qs.exclude(stato_operativo="non_contattare")
+
+    # --- Filtri ---
     q = request.GET.get("q", "").strip()
-    stato = request.GET.get("stato", "").strip()
     primo_contatto_raw = request.GET.get("primo_contatto", "").strip()
     appuntamento_raw = request.GET.get("appuntamento", "").strip()
 
 
-    stato_operativo = request.GET.get("stato_operativo", "").strip()
+    stato_operativo = request.GET.get("stato_operativo", "").strip() or (stato_vista if stato_vista else "")
     richiamo_da_raw = request.GET.get("richiamo_da", "").strip()
     richiamo_a_raw = request.GET.get("richiamo_a", "").strip()
-    creditore_legale = request.GET.get("creditore_legale", "").strip()
-
-    # --- NUOVI FILTRI ---
-    provenienza = request.GET.get("provenienza", "").strip()   # 'tiktok' | 'meta' | 'google' | 'passaparola'
-    consulente_id = request.GET.get("consulente", "").strip()  # id numerico
+    consulente_id = request.GET.get("consulente", "").strip()
+    esiti_list = request.GET.getlist("esiti")
 
     if q:
         qs = qs.filter(
@@ -856,9 +919,6 @@ def lead_lista(request):
             Q(email__icontains=q) |
             Q(telefono__icontains=q)
         )
-    if stato in {"in_corso", "negativo", "positivo"}:
-        qs = qs.filter(stato=stato)
-
     primo_contatto = _parse_date(primo_contatto_raw)
     appuntamento = _parse_date(appuntamento_raw)
 
@@ -868,11 +928,15 @@ def lead_lista(request):
     if appuntamento:
         qs = qs.filter(appuntamento_previsto__date=appuntamento)
 
-    if stato_operativo in dict(Lead.StatoOperativo.choices):
+    if stato_operativo in dict(Lead.StatoOperativo.choices) and not stato_vista:
         qs = qs.filter(stato_operativo=stato_operativo)
+    elif stato_vista:
+        pass  # già filtrato per stato_vista
 
-    if creditore_legale in dict(CreditoreLegale.choices):
-        qs = qs.filter(creditore_legale=creditore_legale)
+    if esiti_list and not stato_vista:
+        validi = [e for e in esiti_list if e in dict(Lead.StatoOperativo.choices)]
+        if validi:
+            qs = qs.filter(stato_operativo__in=validi)
 
     richiamo_da = _parse_date(richiamo_da_raw)
     richiamo_a = _parse_date(richiamo_a_raw)
@@ -890,13 +954,10 @@ def lead_lista(request):
             appuntamento_previsto__date__lte=end
         )
 
-    # Applica nuovi filtri
-    if provenienza in dict(Lead.Provenienza.choices):
-        qs = qs.filter(provenienza=provenienza)
     if consulente_id.isdigit():
         qs = qs.filter(consulente_id=int(consulente_id))
 
-    # --- SORT ---
+    # --- SORT: appuntamenti prossimi prima, con esito/chiusi dopo ---
     sort_raw = request.GET.get("sort", "").strip()
     sort_map = {
         "nome": "nome", "-nome": "-nome",
@@ -905,15 +966,24 @@ def lead_lista(request):
         "appuntamento_previsto": "appuntamento_previsto", "-appuntamento_previsto": "-appuntamento_previsto",
         "richiamare_il": "richiamare_il", "-richiamare_il": "-richiamare_il",
         "primo_contatto": "primo_contatto", "-primo_contatto": "-primo_contatto",
-        "provenienza": "provenienza", "-provenienza": "-provenienza",
         "consulente": "consulente__nome", "-consulente": "-consulente__nome",
     }
-    sort = sort_map.get(sort_raw, "-primo_contatto")
-    if sort == "-primo_contatto":
+    # Default: appuntamenti prossimi prima, esitati in fondo
+    sort = sort_map.get(sort_raw)
+    if sort is None:
+        stati_chiusi = {"consulenza_eff", "non_competenza", "non_contattare"}
+        qs = qs.annotate(
+            _ordine_fase=Case(
+                When(stato_operativo__in=stati_chiusi, then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ).order_by("_ordine_fase", "-primo_contatto", "appuntamento_previsto", "-creato_il")
+    elif sort == "-primo_contatto":
         qs = qs.order_by("-primo_contatto", "-creato_il")
     elif sort == "primo_contatto":
         qs = qs.order_by("primo_contatto", "-creato_il")
-    else: 
+    else:
         qs = qs.order_by(sort)
 
 
@@ -929,20 +999,20 @@ def lead_lista(request):
     return render(request, "crm/lead_lista.html", {
         "leads": page_obj.object_list,
         "page_obj": page_obj,
-        "q": q, "stato": stato, 
+        "q": q,
         "primo_contatto": primo_contatto_raw, 
         "appuntamento": appuntamento_raw,
         "stato_operativo": stato_operativo,
+        "stato_vista": stato_vista,
+        "stato_vista_label": stato_vista_label,
+        "stato_slug_actual": stato_slug_actual,
         "STATI_OPERATIVI": Lead.StatoOperativo.choices,
         "richiamo_da": richiamo_da_raw, "richiamo_a": richiamo_a_raw,
         "sort": sort_raw, "ha_negativi": ha_negativi, "per": per_page,
-        "provenienza": provenienza,
         "consulente_sel": consulente_id,
         "consulenti": consulenti,
-        "PROVENIENZA_CHOICES": Lead.Provenienza.choices,
         "appt": appt,
-        "creditore_legale": creditore_legale,
-        "CREDITORI_LEGALI": CreditoreLegale.choices,
+        "esiti_selezionati": esiti_list,
     })
 
 
@@ -1015,6 +1085,32 @@ def lead_aggiorna_stato_operativo(request, lead_id):
     else:
         messages.error(request, "Stato lavorazione non valido.")
 
+    return redirect(_back(request))
+
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_POST
+def lead_elimina(request, lead_id):
+    lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
+    lead.delete()
+    messages.success(request, "Lead eliminato.")
+    return redirect("lead_lista")
+
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_POST
+def lead_ricontatta(request, lead_id):
+    lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
+    lead.ricontatti_count = (lead.ricontatti_count or 0) + 1
+    if lead.ricontatti_count >= 3:
+        lead.stato_operativo = Lead.StatoOperativo.NON_CONTATTARE
+    lead.save(update_fields=["ricontatti_count", "stato_operativo"])
+    if lead.ricontatti_count >= 3:
+        messages.info(request, f"Lead contattato 3 volte senza risposta → spostato in \"Non contattare\".")
+    else:
+        messages.success(request, f"Ricontatto registrato ({lead.ricontatti_count}/3).")
     return redirect(_back(request))
 
 

@@ -67,7 +67,11 @@
     @apply rounded-2xl bg-base-100 shadow-xl ring-1 ring-base-300/60
            dark:ring-base-200/10 overflow-hidden;
   }
-  .table-scroll { @apply overflow-x-auto; }
+  .table-scroll {
+    @apply overflow-auto;
+    max-height: min(calc(100vh - 280px), 600px);
+    /* La barra orizzontale resta visibile in fondo all'area tabella, senza dover scrollare la pagina */
+  }
 
   /* NON usiamo @apply su classi DaisyUI.
      Mettiamo solo utilità Tailwind qui, e le classi DaisyUI le aggiungiamo nell’HTML. */

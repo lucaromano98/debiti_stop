@@ -13,7 +13,7 @@
       </p>
       <h1 class="text-2xl font-extrabold tracking-tight">Scheda di consulenza</h1>
     </div>
-    <a class="btn btn-ghost" href="{% if cliente %}{% url 'cliente_dettaglio' cliente.id %}{% elif lead %}{% url 'lead_dettaglio' lead.id %}{% else %}{% url 'dashboard' %}{% endif %}">⬅️ Indietro</a>
+    <a class="btn btn-ghost" href="{% if cliente %}{% url 'cliente_dettaglio' cliente.id %}{% elif lead %}{% url 'lead_dettaglio' lead.id %}{% else %}{% url 'dashboard' %}{% endif %}"><i data-lucide="arrow-left" class="w-5 h-5 inline-block align-middle mr-1"></i>Indietro</a>
   </div>
 
   <div class="card bg-base-100 shadow">

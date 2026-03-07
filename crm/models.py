@@ -210,15 +210,16 @@ class Lead(models.Model):
         ("positivo", "Esito positivo"),
     )
 
-    # NUOVO: stato operativo / workflow
+    # Stato operativo / workflow
     class StatoOperativo(models.TextChoices):
         NUOVO = "nuovo", "Nuovo"
-        MESSAGGIO_INVIATO = "msg_inviato", "Messaggio inviato"
         SENZA_RISPOSTA = "no_risposta", "Senza risposta"
+        SEGRETERIA = "segreteria", "Segreteria"
+        HA_STACCATO_LUI = "ha_staccato_lui", "Ha staccato lui"
         CONSULENZA_EFFETTUATA = "consulenza_eff", "Consulenza effettuata"
-        IN_ACQUISIZIONE = "in_acquisizione", "In acquisizione"
         NON_DI_COMPETENZA = "non_competenza", "Attività non di competenza"
         ATTESA_CONTATTI_CLIENTE = "attesa_contatti", "Attesa contatti cliente"
+        NON_CONTATTARE = "non_contattare", "Non contattare"
 
     # Anagrafica base
     nome = models.CharField(max_length=100)
@@ -299,6 +300,7 @@ class Lead(models.Model):
     in_acquisizione = models.BooleanField(default=False)
 
     richiamare_il = models.DateTimeField(null=True, blank=True)
+    ricontatti_count = models.PositiveIntegerField(default=0, help_text="Numero di ricontatti senza risposta")
 
     class Meta:
         indexes = [

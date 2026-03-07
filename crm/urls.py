@@ -5,7 +5,7 @@ from . import views
 
 from .views import (
     # auth / base
-    CustomLoginView, dashboard, home_redirect,
+    CustomLoginView, dashboard, home_redirect, report_giornaliero_lead,
     # clienti
     clienti_tutti, clienti_legali, clienti_attivi, clienti_non_attivi,
     cliente_nuovo, clienti_dettaglio, cliente_modifica, cliente_elimina,
@@ -16,7 +16,7 @@ from .views import (
     # note
     nota_crea, nota_modifica, nota_elimina,
     # lead
-    lead_lista, lead_nuovo, lead_modifica, lead_dettaglio,
+    lead_lista, lead_nuovo, lead_modifica, lead_dettaglio, lead_elimina, lead_ricontatta,
     lead_toggle_consulenza, lead_toggle_no_risposta, lead_toggle_msg, lead_aggiorna_stato_operativo,
     # schede consulenza
     scheda_consulenza_nuova, scheda_consulenza_dettaglio,
@@ -39,6 +39,7 @@ urlpatterns = [
     path("login/", CustomLoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("dashboard/", dashboard, name="dashboard"),
+    path("report-giornaliero-lead/", report_giornaliero_lead, name="report_giornaliero_lead"),
 
     # reset password
     path("password-reset/",
@@ -82,6 +83,7 @@ urlpatterns = [
 
     # Lead
     path("leads/", lead_lista, name="lead_lista"),
+    path("leads/stato/<slug:stato_slug>/", lead_lista, name="lead_lista_stato"),
     path("leads/nuovo/", lead_nuovo, name="lead_nuovo"),
     path("leads/<int:lead_id>/modifica/", lead_modifica, name="lead_modifica"),
     path("leads/<int:lead_id>/", lead_dettaglio, name="lead_dettaglio"),
@@ -89,6 +91,8 @@ urlpatterns = [
     path("leads/<int:lead_id>/toggle-no-risposta/", lead_toggle_no_risposta, name="lead_toggle_no_risposta"),
     path("leads/<int:lead_id>/toggle-msg/", lead_toggle_msg, name="lead_toggle_msg"),
     path("leads/<int:lead_id>/stato-operativo/", lead_aggiorna_stato_operativo, name="lead_aggiorna_stato_operativo"),
+    path("leads/<int:lead_id>/elimina/", lead_elimina, name="lead_elimina"),
+    path("leads/<int:lead_id>/ricontatta/", lead_ricontatta, name="lead_ricontatta"),
 
     # Schede di consulenza
     # — crea per CLIENTE (nome che il tuo template già usa)

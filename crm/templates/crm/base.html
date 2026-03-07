@@ -29,25 +29,18 @@
   </style>
 
   {% block extra_css %}{% endblock %}
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+  </script>
 </head>
 
 <body class="min-h-screen antialiased
              bg-slate-50 text-slate-900
              dark:bg-[#0b1220] dark:text-slate-100
              {% block body_class %}{% endblock %}">
-
-  <!-- Toggle tema -->
-  <button
-    type="button"
-    data-theme-toggle
-    class="fixed right-4 top-4 z-[9999] inline-flex items-center gap-1 rounded-full border px-3 py-1.5
-           border-slate-300/60 bg-white/90 text-slate-800 shadow-sm backdrop-blur
-           hover:bg-white dark:border-white/10 dark:bg-slate-900/80 dark:text-slate-100"
-    aria-label="Cambia tema" title="Cambia tema"
-    onclick="(function(){var r=document.documentElement;var n=r.classList.contains('dark')?'light':'dark';r.classList.toggle('dark',n==='dark');r.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){}})()">
-    <span class="dark:hidden">🌙</span>
-    <span class="hidden dark:inline">☀️</span>
-  </button>
 
   <!-- Layout: sidebar + contenuto -->
   <div id="layout-root" class="grid min-h-screen grid-cols-[260px_minmax(0,1fr)]">
@@ -90,25 +83,33 @@
       <!-- Blocco utente -->
       <div class="mx-4 mb-3 rounded-xl border border-slate-200/60 bg-white/70 p-3 text-sm
                   dark:border-white/10 dark:bg-slate-800/60">
-        <div class="flex items-center gap-2">
-          <!-- user icon -->
-          <svg class="w-5 h-5 text-slate-600 dark:text-slate-300" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="10" cy="8" r="4"/>
-          </svg>
-          <span class="truncate group-data-[collapsed=true]/sidebar:hidden">
-            {{ request.user.username }}
-            {% if request.user.profiloutente and request.user.profiloutente.ruolo %}
-              <span class="text-slate-500 dark:text-slate-400">
-                ({{ request.user.profiloutente.ruolo|title }})
-              </span>
-            {% endif %}
-          </span>
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <svg class="w-5 h-5 shrink-0 text-slate-600 dark:text-slate-300" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="10" cy="8" r="4"/>
+            </svg>
+            <span class="truncate group-data-[collapsed=true]/sidebar:hidden">
+              {{ request.user.username }}
+              {% if request.user.profiloutente and request.user.profiloutente.ruolo %}
+                <span class="text-slate-500 dark:text-slate-400">
+                  ({{ request.user.profiloutente.ruolo|title }})
+                </span>
+              {% endif %}
+            </span>
+          </div>
+          <button type="button" data-theme-toggle
+            class="shrink-0 rounded-md p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+            aria-label="Cambia tema" title="Cambia tema"
+            onclick="(function(){var r=document.documentElement;var n=r.classList.contains('dark')?'light':'dark';r.classList.toggle('dark',n==='dark');r.setAttribute('data-theme',n);try{localStorage.setItem('theme',n);}catch(e){};try{window.dispatchEvent(new CustomEvent('themechange',{detail:{theme:n}}));}catch(e){}})()">
+            <i data-lucide="moon" class="w-4 h-4 inline-block align-middle dark:hidden"></i>
+            <i data-lucide="sun" class="w-4 h-4 inline-block align-middle hidden dark:inline"></i>
+          </button>
         </div>
       </div>
 
-      <!-- 🔔 Notifiche -->
+      <!-- Notifiche -->
       <div class="mx-4 mb-3 rounded-xl border border-slate-200/60 bg-white/70 p-3
                   dark:border-white/10 dark:bg-slate-800/60">
         <div class="flex items-center justify-between">
@@ -200,35 +201,6 @@
           </span>
         </a>
 
-        <!-- Possibile Cliente -->
-        <a href="{% url 'lead_nuovo' %}"
-          aria-current="{% if curr == 'lead_nuovo' %}page{% endif %}"
-          class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
-                  text-slate-700 hover:bg-slate-100
-                  dark:text-slate-200 dark:hover:bg-slate-800
-                  aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
-                  before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
-                  before:h-6 before:w-[3px] before:rounded-r
-                  before:opacity-0 aria-[current=page]:before:opacity-100
-                  before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
-          <svg class="w-5 h-5 shrink-0 text-slate-600 group-hover/nav:text-slate-900 dark:text-slate-300 dark:group-hover/nav:text-white"
-               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="10" cy="8" r="4"/>
-            <path d="M20 8v6M17 11h6"/>
-          </svg>
-          <span class="item-label truncate group-data-[collapsed=true]/sidebar:hidden">Possibile Cliente</span>
-          <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
-                       translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
-                       opacity-0 shadow-lg ring-1 ring-black/10
-                       bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
-                       group-hover/nav:opacity-100
-                       group-data-[collapsed=false]/sidebar:hidden">
-            Possibile Cliente
-          </span>
-        </a>
-
         <!-- Tutti i Clienti -->
         <a href="{% url 'clienti_tutti' %}"
           aria-current="{% if curr == 'clienti_tutti' %}page{% endif %}"
@@ -259,33 +231,69 @@
           </span>
         </a>
 
-        <!-- Possibili Clienti -->
-        <a href="{% url 'lead_lista' %}"
-          aria-current="{% if curr == 'lead_lista' %}page{% endif %}"
+        <!-- Lead (macrocategoria) -->
+        <details class="group/lead" open>
+          <summary class="flex cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2
+                          text-slate-700 hover:bg-slate-100
+                          dark:text-slate-200 dark:hover:bg-slate-800
+                          [&::-webkit-details-marker]:hidden">
+            <svg class="w-5 h-5 shrink-0 text-slate-600 dark:text-slate-300"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="4" y="3" width="16" height="18" rx="2"/>
+              <path d="M9 7h6M8 12h8M8 17h8"/>
+            </svg>
+            <span class="item-label truncate font-semibold group-data-[collapsed=true]/sidebar:hidden">Lead</span>
+            <svg class="ml-auto h-4 w-4 shrink-0 transition-transform group-open/lead:rotate-180
+                        group-data-[collapsed=true]/sidebar:hidden"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </summary>
+          <ul class="mt-1 ml-4 space-y-0.5 border-l border-slate-200/60 pl-3
+                     dark:border-white/10 group-data-[collapsed=true]/sidebar:hidden">
+            <li>
+              <a href="{% url 'lead_nuovo' %}"
+                class="block rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900
+                       dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100
+                       {% if curr == 'lead_nuovo' %}font-semibold text-slate-900 dark:text-slate-100{% endif %}">
+                + Possibile Cliente
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'lead_lista' %}"
+                class="block rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900
+                       dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100
+                       {% if curr == 'lead_lista' %}font-semibold text-slate-900 dark:text-slate-100{% endif %}">
+                Possibili clienti
+              </a>
+            </li>
+            {% for slug, label in sidebar_lead_stati %}
+            <li>
+              <a href="{% url 'lead_lista_stato' stato_slug=slug %}"
+                class="block rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900
+                       dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100
+                       {% if request.resolver_match.url_name == 'lead_lista_stato' and request.resolver_match.kwargs.stato_slug == slug %}font-semibold text-slate-900 dark:text-slate-100{% endif %}">
+                {{ label }}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+
+        {% if request.user.is_superuser or request.user.profiloutente and request.user.profiloutente.ruolo == 'admin' %}
+        <!-- Report Giornaliero (solo admin) -->
+        <a href="{% url 'report_giornaliero_lead' %}"
+          aria-current="{% if curr == 'report_giornaliero_lead' %}page{% endif %}"
           class="group/nav relative flex items-center gap-3 rounded-lg px-3 py-2
                   text-slate-700 hover:bg-slate-100
                   dark:text-slate-200 dark:hover:bg-slate-800
-                  aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800
-                  before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2
-                  before:h-6 before:w-[3px] before:rounded-r
-                  before:opacity-0 aria-[current=page]:before:opacity-100
-                  before:bg-gradient-to-b before:from-indigo-600 before:to-cyan-400">
-          <svg class="w-5 h-5 shrink-0 text-slate-600 group-hover/nav:text-slate-900 dark:text-slate-300 dark:group-hover/nav:text-white"
-               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="4" y="3" width="16" height="18" rx="2"/>
-            <path d="M9 7h6M8 12h8M8 17h8"/>
+                  aria-[current=page]:bg-slate-100 dark:aria-[current=page]:bg-slate-800">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
           </svg>
-          <span class="item-label truncate group-data-[collapsed=true]/sidebar:hidden">Possibili clienti</span>
-          <span class="pointer-events-none absolute left-full top-1/2 z-10 -translate-y-1/2
-                       translate-x-2 whitespace-nowrap rounded-md px-2 py-1 text-sm
-                       opacity-0 shadow-lg ring-1 ring-black/10
-                       bg-white/90 text-slate-900 dark:bg-slate-800/90 dark:text-slate-100
-                       group-hover/nav:opacity-100
-                       group-data-[collapsed=false]/sidebar:hidden">
-            Possibili clienti
-          </span>
+          <span class="item-label truncate group-data-[collapsed=true]/sidebar:hidden">Report Lead</span>
         </a>
+        {% endif %}
 
         <!-- Divider -->
         <div class="mt-3 border-t border-slate-200/60 dark:border-white/10"></div>
@@ -346,7 +354,7 @@
       <div class="flex items-center justify-between">
         <h3 class="font-bold text-lg">Notifiche</h3>
         <form method="dialog">
-          <button class="btn btn-sm btn-ghost">✕</button>
+          <button class="btn btn-sm btn-ghost"><i data-lucide="x" class="w-4 h-4 inline-block align-middle"></i></button>
         </form>
       </div>
 

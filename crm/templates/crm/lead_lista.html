@@ -2,7 +2,7 @@
 {% extends "crm/base.html" %}
 {% load qparams %}
 
-{% block title %}Tutti i lead · Debiti Stop{% endblock %}
+{% block title %}{% if stato_vista_label %}{{ stato_vista_label }} · {% endif %}Lead · Debiti Stop{% endblock %}
 
 {% block content %}
 
@@ -37,11 +37,18 @@
   border-color: #475569;
 }
 
-/* Messaggio inviato */
-.badge-work-msg {
+/* Segreteria */
+.badge-work-segreteria {
   background: #075985;      /* sky-800 */
   color: #e0f2fe;           /* sky-100 */
   border-color: #0ea5e9;    /* sky-500 */
+}
+
+/* Ha staccato lui */
+.badge-work-staccato {
+  background: #4c1d95;      /* violet-800 */
+  color: #ede9fe;           /* violet-100 */
+  border-color: #8b5cf6;    /* violet-500 */
 }
 
 /* Senza risposta */
@@ -58,11 +65,11 @@
   border-color: #22c55e;    /* green-500 */
 }
 
-/* In acquisizione */
-.badge-work-acquisizione {
-  background: #3730a3;      /* indigo-800 */
-  color: #e0e7ff;           /* indigo-100 */
-  border-color: #6366f1;    /* indigo-500 */
+/* Non contattare */
+.badge-work-non-contattare {
+  background: #374151;      /* gray-700 */
+  color: #e5e7eb;           /* gray-200 */
+  border-color: #6b7280;    /* gray-500 */
 }
 
 /* Attività non di competenza */
@@ -78,6 +85,34 @@
   color: #f3e8ff;           /* purple-100 */
   border-color: #a855f7;    /* purple-500 */
 }
+
+/* Colore riga per ricontatti – testo sempre leggibile */
+tr.row-ricontatti-1 {
+  background-color: rgba(251, 191, 36, 0.25) !important;
+}
+tr.row-ricontatti-1 td { color: #1c1917; }
+.dark tr.row-ricontatti-1 {
+  background-color: rgba(180, 83, 9, 0.35) !important;
+}
+.dark tr.row-ricontatti-1 td { color: #fef3c7; }
+
+tr.row-ricontatti-2 {
+  background-color: rgba(234, 88, 12, 0.22) !important;
+}
+tr.row-ricontatti-2 td { color: #1c1917; }
+.dark tr.row-ricontatti-2 {
+  background-color: rgba(154, 52, 18, 0.4) !important;
+}
+.dark tr.row-ricontatti-2 td { color: #ffedd5; }
+
+tr.row-ricontatti-3 {
+  background-color: rgba(120, 53, 15, 0.2) !important;
+}
+tr.row-ricontatti-3 td { color: #292524; }
+.dark tr.row-ricontatti-3 {
+  background-color: rgba(68, 64, 60, 0.5) !important;
+}
+.dark tr.row-ricontatti-3 td { color: #d6d3d1; }
 </style>
 
 
@@ -86,10 +121,8 @@
 
   <!-- Header -->
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-extrabold">Tutti i lead</h1>
+    <h1 class="text-xl font-extrabold">{% if stato_vista_label %}Lead: {{ stato_vista_label }}{% else %}Tutti i lead{% endif %}</h1>
     <div class="flex gap-2">
-      {# opzionale: export, se hai la view lead_export #}
-      {# <a class="btn btn-outline" href="{% url 'lead_export' %}?{{ request.GET.urlencode }}">⬇︎ Esporta CSV</a> #}
       <a class="btn btn-primary" href="{% url 'lead_nuovo' %}">+ Nuovo lead</a>
     </div>
   </div>
@@ -103,17 +136,7 @@
           <input type="text" name="q" value="{{ q }}" class="input input-bordered w-full" />
         </label>
 
-        <label class="form-control">
-          <div class="label"><span class="label-text">Stato</span></div>
-          <select name="stato" class="select select-bordered w-full">
-            <option value="">Tutti</option>
-            <option value="in_corso" {% if stato == 'in_corso' %}selected{% endif %}>In corso</option>
-            <option value="negativo" {% if stato == 'negativo' %}selected{% endif %}>Negativo</option>
-            <option value="positivo" {% if stato == 'positivo' %}selected{% endif %}>Positivo</option>
-          </select>
-        </label>
-
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-3 md:col-span-2">
           <label class="form-control">
             <div class="label"><span class="label-text">Primo Contatto</span></div>
             <input type="date" name="primo_contatto" value="{{ primo_contatto }}" class="input input-bordered w-full" />
@@ -126,18 +149,8 @@
 
       </div>
 
-      {# --- FILTRI: PROVENIENZA + CONSULENTE + STATO LAVORAZIONE --- #}
-      <div class="grid gap-3 md:grid-cols-4">
-        <label class="form-control">
-          <div class="label"><span class="label-text">Provenienza</span></div>
-          <select name="provenienza" class="select select-bordered w-full">
-            <option value="">Tutte</option>
-            {% for val,label in PROVENIENZA_CHOICES %}
-              <option value="{{ val }}" {% if provenienza == val %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </label>
-
+      {# --- FILTRI: CONSULENTE + STATO LAVORAZIONE --- #}
+      <div class="grid gap-3 md:grid-cols-3">
         <label class="form-control">
           <div class="label"><span class="label-text">Consulente</span></div>
           <select name="consulente" class="select select-bordered w-full">
@@ -150,6 +163,7 @@
           </select>
         </label>
 
+        {% if not stato_vista %}
         <label class="form-control">
           <div class="label"><span class="label-text">Stato lavorazione</span></div>
           <select name="stato_operativo" class="select select-bordered w-full">
@@ -159,20 +173,26 @@
             {% endfor %}
           </select>
         </label>
-
-        <label class="form-control">
-          <div class="label"><span class="label-text">Creditore legale</span></div>
-          <select name="creditore_legale" class="select select-bordered w-full">
-            <option value="">Tutti</option>
-            {% for val,label in CREDITORI_LEGALI %}
-              <option value="{{ val }}" {% if creditore_legale == val %}selected{% endif %}>
-                {{ label }}
-              </option>
-            {% endfor %}
-          </select>
-        </label>
+        {% endif %}
 
       </div>
+
+      {% if not stato_vista %}
+      {# Filtro esiti multipli - nascosto quando si è in una vista stato dedicata #}
+      <div class="form-control">
+        <div class="label"><span class="label-text">Filtra per esiti (multi-select)</span></div>
+        <div class="flex flex-wrap gap-2">
+          {% for val,label in STATI_OPERATIVI %}
+            <label class="label cursor-pointer gap-2 border rounded-lg px-3 py-1.5">
+              <input type="checkbox" name="esiti" value="{{ val }}"
+                     {% if val in esiti_selezionati %}checked{% endif %}
+                     class="checkbox checkbox-sm">
+              <span class="label-text">{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Quick filter appuntamenti -->
       <div class="card bg-base-200/40">
@@ -195,9 +215,9 @@
               <input type="radio" name="appt" value="next3" class="hidden" {% if appt == 'next3' %}checked{% endif %}>
               Prossimi 3 giorni
             </label>
-            <label class="btn btn-sm {% if appt == 'next7' %}btn-active{% endif %}">
-              <input type="radio" name="appt" value="next7" class="hidden" {% if appt == 'next7' %}checked{% endif %}>
-              Prossimi 7 giorni
+            <label class="btn btn-sm {% if appt == 'yesterday' %}btn-active{% endif %}">
+              <input type="radio" name="appt" value="yesterday" class="hidden" {% if appt == 'yesterday' %}checked{% endif %}>
+              Ieri
             </label>
           </div>
         </div>
@@ -205,7 +225,7 @@
 
       <div class="flex items-center gap-2 justify-end">
         <button type="submit" class="btn btn-primary">Filtra</button>
-        <a class="btn btn-ghost" href="{% url 'lead_lista' %}">Reset</a>
+        <a class="btn btn-ghost" href="{% if stato_slug_actual %}{% url 'lead_lista_stato' stato_slug=stato_slug_actual %}{% else %}{% url 'lead_lista' %}{% endif %}">Reset</a>
       </div>
     </div>
   </form>
@@ -226,23 +246,14 @@
               <span class="sort-raw">▲▼</span>
             </th>
             <th>Lavorazione</th>
-            <th>Creditore Legale</th>
-            <th>Email</th>
+            <th class="th-min text-center">Ricontatti</th>
             <th>Telefono</th>
-            <th>
-              <a href="{% qurl sort='provenienza' page=None %}" class="link link-hover">Provenienza</a>
-              <span class="sort-raw">▲▼</span>
-            </th>
             <th>
               <a href="{% qurl sort='consulente' page=None %}" class="link link-hover">Consulente</a>
               <span class="sort-raw">▲▼</span>
             </th>
             <th>
               <a href="{% qurl sort='primo_contatto' page=None %}" class="link link-hover">Primo contatto</a>
-              <span class="sort-raw">▲▼</span>
-            </th>
-            <th>
-              <a href="{% qurl sort='creato_il' page=None %}" class="link link-hover">Creato</a>
               <span class="sort-raw">▲▼</span>
             </th>
             <th>
@@ -255,13 +266,13 @@
               <a href="{% qurl sort='richiamare_il' page=None %}" class="link link-hover">Richiamare il</a>
               <span class="sort-raw">▲▼</span>
             </th>
-            <th>Stato</th>
+            <th>Note</th>
             <th class="th-min td-actions">Azioni</th>
           </tr>
         </thead>
         <tbody>
           {% for l in leads %}
-          <tr class="lead-row cursor-pointer"
+          <tr class="lead-row cursor-pointer {% if l.ricontatti_count >= 3 %}row-ricontatti-3{% elif l.ricontatti_count == 2 %}row-ricontatti-2{% elif l.ricontatti_count == 1 %}row-ricontatti-1{% endif %}"
               data-detail-url="{% url 'lead_dettaglio' l.pk %}">
             <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
             <td class="td-nowrap">{{ l.nome }}</td>
@@ -273,37 +284,29 @@
                 <span class="badge-work badge-work-consulenza">Consulenza effettuata</span>
               {% elif l.stato_operativo == 'no_risposta' %}
                 <span class="badge-work badge-work-no-risposta">Senza risposta</span>
-              {% elif l.stato_operativo == 'msg_inviato' %}
-                <span class="badge-work badge-work-msg">Messaggio inviato</span>
-              {% elif l.stato_operativo == 'in_acquisizione' %}
-                <span class="badge-work badge-work-acquisizione">In acquisizione</span>
+              {% elif l.stato_operativo == 'segreteria' %}
+                <span class="badge-work badge-work-segreteria">Segreteria</span>
+              {% elif l.stato_operativo == 'ha_staccato_lui' %}
+                <span class="badge-work badge-work-staccato">Ha staccato lui</span>
               {% elif l.stato_operativo == 'non_competenza' %}
                 <span class="badge-work badge-work-non-competenza">Non di competenza</span>
               {% elif l.stato_operativo == 'attesa_contatti' %}
                 <span class="badge-work badge-work-attesa">Attesa contatti</span>
+              {% elif l.stato_operativo == 'non_contattare' %}
+                <span class="badge-work badge-work-non-contattare">Non contattare</span>
               {% else %}
                 <span class="badge-work badge-work-nuovo">Nuovo</span>
               {% endif %}
             </td>
 
-            <td class="td-nowrap">
-              {% if l.creditore_legale == "altro" and l.creditore_legale_altro %}
-                {{ l.creditore_legale_altro }}
-              {% else %}
-                {{ l.get_creditore_legale_display|default:"—" }}
-              {% endif %}
+            <td class="td-nowrap text-center font-semibold" title="Contatti effettuati senza risposta">
+              {{ l.ricontatti_count|default:0 }}/3
             </td>
-
-            <td class="td-nowrap">{{ l.email|default:"—" }}</td>
             <td class="td-nowrap">{{ l.telefono|default:"—" }}</td>
-            <td class="td-nowrap">
-              {{ l.get_provenienza_display|default:"—" }}
-            </td>
             <td class="td-nowrap">{{ l.consulente|default:"—" }}</td>
             <td class="td-nowrap">
               {% if l.primo_contatto %}{{ l.primo_contatto|date:"d/m/Y H:i" }}{% else %}—{% endif %}
             </td>
-            <td class="td-nowrap">{{ l.creato_il|date:"d/m/Y H:i" }}</td>
             <td class="td-nowrap">
               {% if l.appuntamento_previsto %}
                 {{ l.appuntamento_previsto|date:"d/m/Y H:i" }}
@@ -312,25 +315,24 @@
             <td class="td-nowrap">
               {% if l.richiamare_il %}{{ l.richiamare_il|date:"d/m/Y" }}{% else %}—{% endif %}
             </td>
-            <td class="td-nowrap">
-              {% if l.stato == 'positivo' %}
-                <span class="badge-attivo">Positivo</span>
-              {% elif l.stato == 'negativo' %}
-                <span class="badge-negativo">Negativo</span>
-              {% else %}
-                <span class="badge-in-corso">In corso</span>
-              {% endif %}
+            <td class="td-nowrap max-w-[200px] truncate" title="{{ l.note_operatori|default:'' }}">
+              {{ l.note_operatori|truncatewords:8|default:"—" }}
             </td>
             <td class="td-actions">
               <div class="join">
                 <a href="{% url 'lead_dettaglio' l.pk %}" class="btn btn-ghost btn-sm join-item">Apri</a>
                 <a href="{% url 'lead_modifica' l.pk %}" class="btn btn-outline btn-sm join-item">Modifica</a>
+                <form method="post" action="{% url 'lead_elimina' l.pk %}" class="inline join-item"
+                      onsubmit="return confirm('Eliminare definitivamente questo lead?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline btn-error btn-sm">Elimina</button>
+                </form>
               </div>
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="14" class="text-center text-base-content/60 py-6">Nessun lead trovato.</td>
+            <td colspan="12" class="text-center text-base-content/60 py-6">Nessun lead trovato.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -365,7 +367,7 @@
     r.addEventListener('change', () => r.form && r.form.submit());
   });
 
- document.querySelectorAll('select[name="provenienza"], select[name="consulente"], select[name="creditore_legale"]').forEach(s => {
+ document.querySelectorAll('select[name="consulente"], select[name="stato_operativo"]').forEach(s => {
   s.addEventListener('change', () => s.form && s.form.submit());
 });
 
