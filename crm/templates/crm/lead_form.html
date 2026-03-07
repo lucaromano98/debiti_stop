@@ -1,6 +1,16 @@
 {% extends "crm/base.html" %}
 {% block title %}{% if is_edit %}Modifica Lead · Debiti Stop{% else %}Nuovo Lead · Debiti Stop{% endif %}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  .flatpickr-calendar { font-family: inherit; }
+  .flatpickr-day.selected { background: hsl(var(--p)); border-color: hsl(var(--p)); }
+  .flatpickr-time input:focus { outline: none; }
+  .flatpickr-input[readonly] { cursor: pointer; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="mx-auto max-w-6xl space-y-6">
   <!-- Header -->
@@ -64,14 +74,14 @@
             {% endif %}
           </div>
 
-          <!-- Stato -->
+          <!-- Stato di lavorazione -->
           <div class="form-control md:col-span-2">
-            <label class="label" for="{{ form.stato.id_for_label }}">
-              <span class="label-text">Stato</span>
+            <label class="label" for="{{ form.stato_operativo.id_for_label }}">
+              <span class="label-text">Stato di lavorazione</span>
             </label>
-            {{ form.stato }}
-            {% if form.stato.errors %}
-              <div class="alert alert-error mt-2 py-2">{{ form.stato.errors }}</div>
+            {{ form.stato_operativo }}
+            {% if form.stato_operativo.errors %}
+              <div class="alert alert-error mt-2 py-2">{{ form.stato_operativo.errors }}</div>
             {% endif %}
           </div>
         </div>
@@ -99,19 +109,16 @@
           <label class="label" for="{{ form.appuntamento_previsto.id_for_label }}">
             <span class="label-text">Appuntamento previsto</span>
           </label>
-          <div class="flex items-center gap-3">
-            {{ form.appuntamento_previsto }}
-            <span class="text-sm text-slate-500 dark:text-slate-400">Seleziona data e ora</span>
-          </div>
+          {{ form.appuntamento_previsto }}
           {% if form.appuntamento_previsto.errors %}
             <div class="alert alert-error mt-2 py-2">{{ form.appuntamento_previsto.errors }}</div>
           {% endif %}
         </div>
 
-        <!-- Motivazione negativa (solo se stato = negativo) -->
+        <!-- Motivazione (solo se Attività non di competenza) -->
         <div id="blk-motivo" class="form-control hidden">
           <label class="label" for="{{ form.motivazione_negativa.id_for_label }}">
-            <span class="label-text">Motivazione (esito negativo)</span>
+            <span class="label-text">Motivazione (attività non di competenza)</span>
           </label>
           {{ form.motivazione_negativa }}
           {% if form.motivazione_negativa.errors %}
@@ -148,18 +155,45 @@
   </div>
 </div>
 
-<!-- Toggle logica stato + creditore -->
+<!-- Flatpickr: calendario data/ora -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/it.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var fpOpts = {
+      locale: "it",
+      dateFormat: "d/m/Y H:i",
+      enableTime: true,
+      time_24hr: true,
+      allowInput: true
+    };
+
+    var elPrimo = document.getElementById("id_primo_contatto");
+    if (elPrimo) {
+      flatpickr(elPrimo, fpOpts);
+    }
+
+    var elApp = document.getElementById("id_appuntamento_previsto");
+    if (elApp) {
+      flatpickr(elApp, fpOpts);
+    }
+  });
+</script>
+
+<!-- Toggle logica stato operativo -->
 <script>
   (function () {
-    const stato = document.getElementById("id_stato");
+    const stato = document.getElementById("id_stato_operativo");
     const blkApp = document.getElementById("blk-app");
     const blkMot = document.getElementById("blk-motivo");
+
+    const statiChiusi = ["consulenza_eff", "non_competenza", "non_contattare"];
 
     function toggleBlocks() {
       if (!stato || !blkApp || !blkMot) return;
       const v = stato.value;
-      blkApp.classList.toggle("hidden", v !== "in_corso");
-      blkMot.classList.toggle("hidden", v !== "negativo");
+      blkApp.classList.toggle("hidden", statiChiusi.includes(v));
+      blkMot.classList.toggle("hidden", v !== "non_competenza");
     }
 
     if (stato) {

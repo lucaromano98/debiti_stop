@@ -118,7 +118,7 @@ class LeadForm(forms.ModelForm):
         model = Lead
         fields = [
             "nome", "cognome", "telefono", "email",
-            "stato",
+            "stato_operativo",
             "consulenza_effettuata", "no_risposta", "messaggio_inviato",
             "in_acquisizione",
             "appuntamento_previsto", "richiamare_il",
@@ -130,13 +130,15 @@ class LeadForm(forms.ModelForm):
             "cognome": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "telefono": forms.TextInput(attrs={"class": "input input-bordered w-full"}),
             "email": forms.EmailInput(attrs={"class": "input input-bordered w-full"}),
-            "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "stato_operativo": forms.Select(attrs={"class": "select select-bordered w-full"}),
 
             "appuntamento_previsto": forms.DateTimeInput(
-                attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
+                format="%d/%m/%Y %H:%M",
+                attrs={"type": "text", "class": "input input-bordered w-full", "placeholder": "Data e Ora"}
             ),
             "richiamare_il": forms.DateTimeInput(
-                attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
+                format="%d/%m/%Y %H:%M",
+                attrs={"type": "text", "class": "input input-bordered w-full", "placeholder": "gg/mm/aaaa hh:mm"}
             ),
             "motivazione_negativa": forms.Textarea(
                 attrs={"rows": 3, "class": "textarea textarea-bordered w-full"}
@@ -147,7 +149,8 @@ class LeadForm(forms.ModelForm):
 
             "consulente": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "primo_contatto": forms.DateTimeInput(
-                attrs={"type": "datetime-local", "class": "input input-bordered w-full"}
+                format="%d/%m/%Y %H:%M",
+                attrs={"type": "text", "class": "input input-bordered w-full", "placeholder": "Data e Ora"}
             ),
         }
 
@@ -167,38 +170,26 @@ class LeadForm(forms.ModelForm):
         field = self.fields.get("primo_contatto")
         if field is not None:
             field.required = False
-            field.input_formats = [
-                "%Y-%m-%dT%H:%M",
-                "%Y-%m-%d %H:%M",
-                "%d/%m/%Y %H:%M",
-            ]
+            field.input_formats = ["%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"]
 
         field = self.fields.get("appuntamento_previsto")
         if field is not None:
             field.required = False
-            field.input_formats = [
-                "%Y-%m-%dT%H:%M",
-                "%Y-%m-%d %H:%M",
-                "%d/%m/%Y %H:%M",
-            ]
+            field.input_formats = ["%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"]
 
         field = self.fields.get("richiamare_il")
         if field is not None:
             field.required = False
-            field.input_formats = [
-                "%Y-%m-%dT%H:%M",
-                "%Y-%m-%d %H:%M",
-                "%d/%m/%Y %H:%M",
-            ]
+            field.input_formats = ["%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"]
 
     def clean(self):
         cleaned = super().clean()
 
-        stato = cleaned.get("stato")
+        stato_operativo = cleaned.get("stato_operativo")
         motivazione_negativa = cleaned.get("motivazione_negativa")
 
-        if stato == "negativo" and not motivazione_negativa:
-            self.add_error("motivazione_negativa", "Inserisci la motivazione per l’esito negativo.")
+        if stato_operativo == "non_competenza" and not motivazione_negativa:
+            self.add_error("motivazione_negativa", "Inserisci la motivazione per attività non di competenza.")
 
         return cleaned
 
