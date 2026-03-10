@@ -294,6 +294,12 @@ tr.row-ricontatti-3 td { color: #292524; }
                 <span class="badge-work badge-work-attesa">Attesa contatti</span>
               {% elif l.stato_operativo == 'non_contattare' %}
                 <span class="badge-work badge-work-non-contattare">Non contattare</span>
+              {% elif l.stato_operativo == 'numero_errato' %}
+                <span class="badge-work badge-work-non-contattare">Numero errato</span>
+              {% elif l.stato_operativo == 'blocco_chiamate' %}
+                <span class="badge-work badge-work-non-contattare">Blocco chiamate</span>
+              {% elif l.stato_operativo == 'cliente_non_interessato' %}
+                <span class="badge-work badge-work-non-contattare">Cliente non interessato</span>
               {% else %}
                 <span class="badge-work badge-work-nuovo">Nuovo</span>
               {% endif %}

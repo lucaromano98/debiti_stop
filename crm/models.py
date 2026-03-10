@@ -210,16 +210,19 @@ class Lead(models.Model):
         ("positivo", "Esito positivo"),
     )
 
-    # Stato operativo / workflow
+    # Stato operativo / workflow – positivi sopra, negativi sotto, Attività non di competenza ultima
     class StatoOperativo(models.TextChoices):
         NUOVO = "nuovo", "Nuovo"
         SENZA_RISPOSTA = "no_risposta", "Senza risposta"
         SEGRETERIA = "segreteria", "Segreteria"
         HA_STACCATO_LUI = "ha_staccato_lui", "Ha staccato lui"
         CONSULENZA_EFFETTUATA = "consulenza_eff", "Consulenza effettuata"
-        NON_DI_COMPETENZA = "non_competenza", "Attività non di competenza"
         ATTESA_CONTATTI_CLIENTE = "attesa_contatti", "Attesa contatti cliente"
         NON_CONTATTARE = "non_contattare", "Non contattare"
+        NUMERO_ERRATO = "numero_errato", "Numero errato"
+        BLOCCO_CHIAMATE = "blocco_chiamate", "Blocco chiamate"
+        CLIENTE_NON_INTERESSATO = "cliente_non_interessato", "Cliente non interessato"
+        NON_DI_COMPETENZA = "non_competenza", "Attività non di competenza"
 
     # Anagrafica base
     nome = models.CharField(max_length=100)

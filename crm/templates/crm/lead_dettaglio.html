@@ -66,6 +66,12 @@
           <span class="badge badge-accent badge-outline">Attesa contatti cliente</span>
         {% elif lead.stato_operativo == 'non_contattare' %}
           <span class="badge badge-ghost badge-outline">Non contattare</span>
+        {% elif lead.stato_operativo == 'numero_errato' %}
+          <span class="badge badge-ghost badge-outline">Numero errato</span>
+        {% elif lead.stato_operativo == 'blocco_chiamate' %}
+          <span class="badge badge-ghost badge-outline">Blocco chiamate</span>
+        {% elif lead.stato_operativo == 'cliente_non_interessato' %}
+          <span class="badge badge-ghost badge-outline">Cliente non interessato</span>
         {% else %}
           <span class="badge badge-ghost">Nuovo</span>
         {% endif %}

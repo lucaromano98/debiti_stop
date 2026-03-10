@@ -869,16 +869,19 @@ def nota_elimina(request, nota_id):
 # ==============================
 # Lead – lista/filtri/CRUD
 # ==============================
-# Mappa slug URL -> valore stato_operativo
+# Mappa slug URL -> valore stato_operativo (ordine: positivi, poi negativi, non_competenza ultima)
 STATO_SLUG_MAP = {
     "nuovo": "nuovo",
     "no-risposta": "no_risposta",
     "segreteria": "segreteria",
     "ha-staccato-lui": "ha_staccato_lui",
     "consulenza-effettuata": "consulenza_eff",
-    "non-competenza": "non_competenza",
     "attesa-contatti": "attesa_contatti",
     "non-contattare": "non_contattare",
+    "numero-errato": "numero_errato",
+    "blocco-chiamate": "blocco_chiamate",
+    "cliente-non-interessato": "cliente_non_interessato",
+    "non-competenza": "non_competenza",
 }
 
 
@@ -971,7 +974,7 @@ def lead_lista(request, stato_slug=None):
     # Default: appuntamenti prossimi prima, esitati in fondo
     sort = sort_map.get(sort_raw)
     if sort is None:
-        stati_chiusi = {"consulenza_eff", "non_competenza", "non_contattare"}
+        stati_chiusi = {"consulenza_eff", "non_competenza", "non_contattare", "numero_errato", "blocco_chiamate", "cliente_non_interessato"}
         qs = qs.annotate(
             _ordine_fase=Case(
                 When(stato_operativo__in=stati_chiusi, then=Value(1)),

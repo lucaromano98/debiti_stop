@@ -2,16 +2,19 @@
 from .models import Notifica
 
 
-# Slug URL -> (valore DB, label) per sidebar Lead
+# Slug URL -> (slug, label) per sidebar Lead – positivi sopra, negativi sotto, "Attività non di competenza" ultima
 SIDEBAR_LEAD_STATI = [
     ("nuovo", "Nuovo"),
     ("no-risposta", "Senza risposta"),
     ("segreteria", "Segreteria"),
     ("ha-staccato-lui", "Ha staccato lui"),
     ("consulenza-effettuata", "Consulenza effettuata"),
-    ("non-competenza", "Attività non di competenza"),
     ("attesa-contatti", "Attesa contatti"),
     ("non-contattare", "Non contattare"),
+    ("numero-errato", "Numero errato"),
+    ("blocco-chiamate", "Blocco chiamate"),
+    ("cliente-non-interessato", "Cliente non interessato"),
+    ("non-competenza", "Attività non di competenza"),
 ]
 
 

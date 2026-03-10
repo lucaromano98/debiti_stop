@@ -213,3 +213,45 @@
 {"sessionId":"91295b","hypothesisId":"H4","location":"report_giornaliero_lead.html","message":"before renderCharts","data":{"TREND_LABELS_len":7,"STATI_LABELS_len":8},"timestamp":1772904145442}
 {"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":3,"indicesLen":3,"chartLabelsLen":3,"chartValuesLen":3,"ChartDataLabelsDefined":true},"timestamp":1772904145465}
 {"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772904145472}
+{"sessionId":"91295b","hypothesisId":"H1","location":"report_giornaliero_lead.html","message":"ChartDataLabels check","data":{"defined":true},"timestamp":1772905781984}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772905781997}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772905782000}
+{"sessionId":"91295b","hypothesisId":"H4","location":"report_giornaliero_lead.html","message":"before renderCharts","data":{"TREND_LABELS_len":7,"STATI_LABELS_len":8},"timestamp":1772905781985}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772905781985}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772905810780}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772905810791}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772905810794}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772905813482}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772905813497}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772905813499}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772905813966}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772905813974}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772905813976}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772905815243}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772905815252}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772905815254}
+{"sessionId":"91295b","hypothesisId":"H1","location":"report_giornaliero_lead.html","message":"ChartDataLabels check","data":{"defined":true},"timestamp":1772913848308}
+{"sessionId":"91295b","hypothesisId":"H4","location":"report_giornaliero_lead.html","message":"before renderCharts","data":{"TREND_LABELS_len":7,"STATI_LABELS_len":8},"timestamp":1772913848309}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772913848309}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772913848338}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772913848342}
+{"sessionId":"91295b","hypothesisId":"H1","location":"report_giornaliero_lead.html","message":"ChartDataLabels check","data":{"defined":true},"timestamp":1772914340736}
+{"sessionId":"91295b","hypothesisId":"H4","location":"report_giornaliero_lead.html","message":"before renderCharts","data":{"TREND_LABELS_len":7,"STATI_LABELS_len":8},"timestamp":1772914340737}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772914340737}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772914340749}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772914340753}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772914343667}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772914343679}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772914343682}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772914345117}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772914345129}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772914345132}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772914347395}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772914347406}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772914347408}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772914348691}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772914348701}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772914348703}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts enter","data":{},"timestamp":1772914349633}
+{"sessionId":"91295b","hypothesisId":"H2","location":"report_giornaliero_lead.html","message":"Stati chart data","data":{"totalStati":0,"indicesLen":0,"chartLabelsLen":0,"chartValuesLen":0,"ChartDataLabelsDefined":true},"timestamp":1772914349650}
+{"sessionId":"91295b","hypothesisId":"H3","location":"report_giornaliero_lead.html","message":"renderCharts success","data":{},"timestamp":1772914349651}
