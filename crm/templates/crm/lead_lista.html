@@ -44,6 +44,13 @@
   border-color: #0ea5e9;    /* sky-500 */
 }
 
+/* Non fascia oraria */
+.badge-work-non-fascia {
+  background: #115e59;      /* teal-800 */
+  color: #ccfbf1;           /* teal-100 */
+  border-color: #14b8a6;    /* teal-500 */
+}
+
 /* Ha staccato lui */
 .badge-work-staccato {
   background: #4c1d95;      /* violet-800 */
@@ -286,6 +293,8 @@ tr.row-ricontatti-3 td { color: #292524; }
                 <span class="badge-work badge-work-no-risposta">Senza risposta</span>
               {% elif l.stato_operativo == 'segreteria' %}
                 <span class="badge-work badge-work-segreteria">Segreteria</span>
+              {% elif l.stato_operativo == 'non_fascia_oraria' %}
+                <span class="badge-work badge-work-non-fascia">Non fascia oraria</span>
               {% elif l.stato_operativo == 'ha_staccato_lui' %}
                 <span class="badge-work badge-work-staccato">Ha staccato lui</span>
               {% elif l.stato_operativo == 'non_competenza' %}
@@ -321,8 +330,37 @@ tr.row-ricontatti-3 td { color: #292524; }
             <td class="td-nowrap">
               {% if l.richiamare_il %}{{ l.richiamare_il|date:"d/m/Y" }}{% else %}—{% endif %}
             </td>
-            <td class="td-nowrap max-w-[200px] truncate" title="{{ l.note_operatori|default:'' }}">
-              {{ l.note_operatori|truncatewords:8|default:"—" }}
+            <td class="td-nowrap max-w-[260px]">
+              <div class="flex items-center gap-1 min-w-0">
+                <span class="truncate flex-1 min-w-0 cursor-help text-left"
+                      title="{% if l.note_entries.all %}{% for n in l.note_entries.all %}{% if forloop.first %}{{ n.testo }}{% endif %}{% endfor %}{% else %}{{ l.note_operatori|default:'' }}{% endif %}">
+                  {% if l.note_entries.all %}
+                    {% for n in l.note_entries.all %}
+                      {% if forloop.first %}{{ n.testo|truncatewords:8 }}{% endif %}
+                    {% endfor %}
+                  {% elif l.note_operatori %}
+                    {{ l.note_operatori|truncatewords:8 }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </span>
+                {% if l.note_entries.all or l.note_operatori %}
+                <button type="button"
+                        class="btn btn-ghost btn-xs shrink-0 px-1 lead-note-btn"
+                        data-lead-id="{{ l.pk }}"
+                        data-nome="{{ l.nome|escapejs }} {{ l.cognome|escapejs }}"
+                        title="Leggi tutte le note"
+                        aria-label="Leggi tutte le note">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-80" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </button>
+                {% endif %}
+              </div>
+              <pre id="lead-note-src-{{ l.pk }}" class="hidden" aria-hidden="true">{% for n in l.note_entries.all %}[{{ n.creato_il|date:"d/m/Y H:i" }} — {{ n.autore.username|default:"—" }}]
+{{ n.testo }}
+
+{% endfor %}{% if l.note_operatori %}[Testo precedente]
+{{ l.note_operatori }}
+{% endif %}</pre>
             </td>
             <td class="td-actions">
               <div class="join">
@@ -367,6 +405,18 @@ tr.row-ricontatti-3 td { color: #292524; }
 
 </div>
 
+<dialog id="modal-note-lead" class="modal">
+  <div class="modal-box max-w-lg">
+    <h3 class="font-bold text-lg mb-2" id="modal-note-lead-title">Note operatori</h3>
+    <pre id="modal-note-lead-body" class="whitespace-pre-wrap text-sm max-h-[60vh] overflow-y-auto font-sans"></pre>
+    <div class="modal-action mt-4">
+      <form method="dialog">
+        <button type="submit" class="btn">Chiudi</button>
+      </form>
+    </div>
+  </div>
+</dialog>
+
 <!-- Auto-submit per quick appt & select nuovi -->
 <script>
   document.querySelectorAll('input[name="appt"]').forEach(r => {
@@ -384,6 +434,22 @@ tr.row-ricontatti-3 td { color: #292524; }
 
       const url = row.dataset.detailUrl;
       if (url) window.location.href = url;
+    });
+  });
+
+  document.querySelectorAll('.lead-note-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.leadId;
+      const src = id ? document.getElementById('lead-note-src-' + id) : null;
+      const note = src ? src.textContent.trim() : '';
+      const nome = btn.dataset.nome || '';
+      const dlg = document.getElementById('modal-note-lead');
+      const titleEl = document.getElementById('modal-note-lead-title');
+      const bodyEl = document.getElementById('modal-note-lead-body');
+      if (titleEl) titleEl.textContent = nome ? `Note · ${nome}` : 'Note operatori';
+      if (bodyEl) bodyEl.textContent = note || '—';
+      if (dlg && typeof dlg.showModal === 'function') dlg.showModal();
     });
   });
 </script>

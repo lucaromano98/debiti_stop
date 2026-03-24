@@ -321,7 +321,7 @@
     </aside>
 
     <!-- Contenuto -->
-    <main class="content p-6">
+    <main class="content p-6 {% block main_extra_class %}{% endblock %}">
       {% if messages %}
         <div class="mb-4 space-y-2">
           {% for message in messages %}

@@ -16,7 +16,7 @@ from .views import (
     # note
     nota_crea, nota_modifica, nota_elimina,
     # lead
-    lead_lista, lead_nuovo, lead_modifica, lead_dettaglio, lead_elimina, lead_ricontatta,
+    lead_lista, lead_nuovo, lead_modifica, lead_dettaglio, lead_elimina, lead_ricontatta, lead_nota_aggiungi,
     lead_toggle_consulenza, lead_toggle_no_risposta, lead_toggle_msg, lead_aggiorna_stato_operativo,
     # schede consulenza
     scheda_consulenza_nuova, scheda_consulenza_dettaglio,
@@ -93,6 +93,7 @@ urlpatterns = [
     path("leads/<int:lead_id>/stato-operativo/", lead_aggiorna_stato_operativo, name="lead_aggiorna_stato_operativo"),
     path("leads/<int:lead_id>/elimina/", lead_elimina, name="lead_elimina"),
     path("leads/<int:lead_id>/ricontatta/", lead_ricontatta, name="lead_ricontatta"),
+    path("leads/<int:lead_id>/note/", lead_nota_aggiungi, name="lead_nota_aggiungi"),
 
     # Schede di consulenza
     # — crea per CLIENTE (nome che il tuo template già usa)

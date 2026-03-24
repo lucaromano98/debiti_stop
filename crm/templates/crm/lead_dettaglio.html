@@ -58,6 +58,8 @@
           <span class="badge badge-warning badge-outline">Senza risposta</span>
         {% elif lead.stato_operativo == 'segreteria' %}
           <span class="badge badge-info badge-outline">Segreteria</span>
+        {% elif lead.stato_operativo == 'non_fascia_oraria' %}
+          <span class="badge badge-accent badge-outline">Non fascia oraria</span>
         {% elif lead.stato_operativo == 'ha_staccato_lui' %}
           <span class="badge badge-primary badge-outline">Ha staccato lui</span>
         {% elif lead.stato_operativo == 'non_competenza' %}
@@ -111,15 +113,58 @@
       </div>
     {% endif %}
 
-    {% if lead.note_operatori %}
-      <div class="mt-1">
-        <div class="text-xs opacity-60">Note operatori</div>
-        <p class="whitespace-pre-line mt-1">{{ lead.note_operatori }}</p>
-      </div>
-    {% endif %}
-
   </div>
 </div>
+
+  <!-- NOTE OPERATORI -->
+  <section>
+    <div class="card bg-base-100 shadow">
+      <div class="card-body gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="card-title">Note operatori</h2>
+        </div>
+
+        <form method="post" action="{% url 'lead_nota_aggiungi' lead.id %}" class="space-y-2">
+          {% csrf_token %}
+          <label class="form-control w-full">
+            <span class="label-text text-xs opacity-70">Aggiungi una nuova nota</span>
+            <textarea name="testo" rows="3" class="textarea textarea-bordered w-full resize-y"
+                      placeholder="Scrivi qui cosa è successo o cosa è stato concordato con il lead…"
+                      required></textarea>
+          </label>
+          <div class="flex justify-end">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i data-lucide="plus" class="w-4 h-4 inline-block align-middle mr-1"></i>
+              Aggiungi nota
+            </button>
+          </div>
+        </form>
+
+        {% if lead.note_entries.all or lead.note_operatori %}
+          <ul class="space-y-3 border-t border-base-300/60 pt-4">
+            {% for n in lead.note_entries.all %}
+              <li class="rounded-lg border border-base-300/60 bg-base-200/30 px-3 py-2
+                         dark:bg-base-200/10">
+                <div class="flex flex-wrap items-baseline justify-between gap-2 text-xs opacity-70">
+                  <span>{{ n.creato_il|date:"d/m/Y H:i" }}</span>
+                  <span class="font-medium">{{ n.autore.username|default:"—" }}</span>
+                </div>
+                <p class="mt-1 whitespace-pre-wrap text-sm">{{ n.testo }}</p>
+              </li>
+            {% endfor %}
+            {% if lead.note_operatori %}
+              <li class="rounded-lg border border-dashed border-base-300/60 px-3 py-2">
+                <div class="text-xs opacity-60 mb-1">Testo precedente (campo modulo)</div>
+                <p class="whitespace-pre-line text-sm">{{ lead.note_operatori }}</p>
+              </li>
+            {% endif %}
+          </ul>
+        {% else %}
+          <p class="text-sm opacity-70 border-t border-base-300/60 pt-4">Nessuna nota ancora.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
 
   <!-- SCHEDE DI CONSULENZA -->
   <section>

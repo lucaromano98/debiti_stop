@@ -215,6 +215,7 @@ class Lead(models.Model):
         NUOVO = "nuovo", "Nuovo"
         SENZA_RISPOSTA = "no_risposta", "Senza risposta"
         SEGRETERIA = "segreteria", "Segreteria"
+        NON_FASCIA_ORARIA = "non_fascia_oraria", "Non fascia oraria"
         HA_STACCATO_LUI = "ha_staccato_lui", "Ha staccato lui"
         CONSULENZA_EFFETTUATA = "consulenza_eff", "Consulenza effettuata"
         ATTESA_CONTATTI_CLIENTE = "attesa_contatti", "Attesa contatti cliente"
@@ -314,7 +315,33 @@ class Lead(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nome} {self.cognome} ({self.get_stato_display()})"
-    
+
+
+class NotaLead(models.Model):
+    """Note operatori multiple per lead (cronologia)."""
+    lead = models.ForeignKey(
+        Lead,
+        on_delete=models.CASCADE,
+        related_name="note_entries",
+    )
+    autore = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="note_lead_scritte",
+    )
+    testo = models.TextField()
+    creato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-creato_il",)
+        indexes = [
+            models.Index(fields=["lead", "-creato_il"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Nota lead #{self.pk} · {self.lead_id}"
 
 
 # --- NOTIFICHE ---

@@ -7,6 +7,7 @@ SIDEBAR_LEAD_STATI = [
     ("nuovo", "Nuovo"),
     ("no-risposta", "Senza risposta"),
     ("segreteria", "Segreteria"),
+    ("non-fascia-oraria", "Non fascia oraria"),
     ("ha-staccato-lui", "Ha staccato lui"),
     ("consulenza-effettuata", "Consulenza effettuata"),
     ("attesa-contatti", "Attesa contatti"),

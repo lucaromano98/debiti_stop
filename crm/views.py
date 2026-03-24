@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q, Exists, OuterRef, Case, When, Value, IntegerField
+from django.db.models import Q, Exists, OuterRef, Case, When, Value, IntegerField, Prefetch
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -29,6 +29,7 @@ from .models import (
     Pratiche,
     Nota,
     Lead,
+    NotaLead,
     Consulente,
     Notifica,
     SchedaConsulenza,
@@ -36,7 +37,21 @@ from .models import (
 )
 
 
-
+# Slug URL -> stato_operativo Lead (lead_lista_stato)
+STATO_SLUG_MAP = {
+    "nuovo": "nuovo",
+    "no-risposta": "no_risposta",
+    "segreteria": "segreteria",
+    "non-fascia-oraria": "non_fascia_oraria",
+    "ha-staccato-lui": "ha_staccato_lui",
+    "consulenza-effettuata": "consulenza_eff",
+    "attesa-contatti": "attesa_contatti",
+    "non-contattare": "non_contattare",
+    "numero-errato": "numero_errato",
+    "blocco-chiamate": "blocco_chiamate",
+    "cliente-non-interessato": "cliente_non_interessato",
+    "non-competenza": "non_competenza",
+}
 
 
 def notify_doc(actor, cliente, documento):
@@ -869,26 +884,20 @@ def nota_elimina(request, nota_id):
 # ==============================
 # Lead – lista/filtri/CRUD
 # ==============================
-# Mappa slug URL -> valore stato_operativo (ordine: positivi, poi negativi, non_competenza ultima)
-STATO_SLUG_MAP = {
-    "nuovo": "nuovo",
-    "no-risposta": "no_risposta",
-    "segreteria": "segreteria",
-    "ha-staccato-lui": "ha_staccato_lui",
-    "consulenza-effettuata": "consulenza_eff",
-    "attesa-contatti": "attesa_contatti",
-    "non-contattare": "non_contattare",
-    "numero-errato": "numero_errato",
-    "blocco-chiamate": "blocco_chiamate",
-    "cliente-non-interessato": "cliente_non_interessato",
-    "non-competenza": "non_competenza",
-}
-
 
 @login_required
 @user_passes_test(has_portal_access)
 def lead_lista(request, stato_slug=None):
-    qs = Lead.objects.filter(is_archiviato=False).select_related("consulente")
+    qs = (
+        Lead.objects.filter(is_archiviato=False)
+        .select_related("consulente")
+        .prefetch_related(
+            Prefetch(
+                "note_entries",
+                queryset=NotaLead.objects.order_by("-creato_il").select_related("autore"),
+            )
+        )
+    )
 
     stato_vista = None
     stato_vista_label = None
@@ -1064,13 +1073,36 @@ def lead_modifica(request, lead_id):
 @login_required
 @user_passes_test(has_portal_access)
 def lead_dettaglio(request, lead_id):
-    lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
+    lead = get_object_or_404(
+        Lead.objects.prefetch_related(
+            Prefetch(
+                "note_entries",
+                queryset=NotaLead.objects.order_by("creato_il").select_related("autore"),
+            )
+        ),
+        pk=lead_id,
+        is_archiviato=False,
+    )
     schede = SchedaConsulenza.objects.filter(lead=lead).order_by("-created_at")
     return render(request, "crm/lead_dettaglio.html", {
         "lead": lead,
         "schede_consulenza": schede,
-        "STATI_OPERATIVI": Lead.StatoOperativo.choices,  
+        "STATI_OPERATIVI": Lead.StatoOperativo.choices,
     })
+
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_POST
+def lead_nota_aggiungi(request, lead_id):
+    lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
+    testo = (request.POST.get("testo") or "").strip()
+    if not testo:
+        messages.error(request, "Inserisci il testo della nota.")
+        return redirect("lead_dettaglio", lead_id=lead_id)
+    NotaLead.objects.create(lead=lead, autore=request.user, testo=testo)
+    messages.success(request, "Nota aggiunta.")
+    return redirect("lead_dettaglio", lead_id=lead_id)
 
 @login_required
 @user_passes_test(has_portal_access)
