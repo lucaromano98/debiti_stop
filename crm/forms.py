@@ -18,7 +18,7 @@ class ClienteForm(forms.ModelForm):
         fields = [
             "nome", "cognome", "email", "telefono",
             "residenza", "esperienza_finanziaria",
-            "note", "stato", "pratica", "consulente",
+            "note", "stato", "fase", "pratica", "consulente",
             "istanza_visibilita", "documenti_inviati", "perizia_inviata", 
             "creditore_legale", "creditore_legale_altro"
         ]
@@ -31,6 +31,7 @@ class ClienteForm(forms.ModelForm):
             "esperienza_finanziaria": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 1}),
             "note": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 4}),
             "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "fase": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "pratica": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "consulente": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "istanza_visibilita": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),

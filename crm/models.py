@@ -41,15 +41,18 @@ class Cliente(models.Model):
     STATUS_CHOICES = (
         ("active", "Attivo"),
         ("inactive", "Non Attivo"),
-        ("legal", "Legale"),
-        ("istanza", "Istanza di visibilità"),
-        ("stragiudiziale", "Stragiudiziale"),
     )
+    class FaseStato(models.TextChoices):
+        NESSUNA = "", "Nessuna"
+        LEGALE = "legale", "Legale"
+        STRAGIUDIZIALE = "stragiudiziale", "Stragiudiziale"
+        ISTANZA = "istanza", "Istanza di visibilità"
+
     class PraticaStato(models.TextChoices):
         BUON_FINE = "buon_fine", "Buon fine"
         DOC_MANCANTI = "doc_mancanti", "Doc Mancanti"
         REVOCA = "revoca", "Revoca"
-        COCLUSO = "cocluso", "Cocluso"
+        CONCLUSO = "concluso", "Concluso"
 
     nome = models.CharField(max_length=100)
     cognome = models.CharField(max_length=100)
@@ -61,6 +64,13 @@ class Cliente(models.Model):
     note = models.TextField(blank=True, null=True)
 
     stato = models.CharField(max_length=50, choices=STATUS_CHOICES, default="active", db_index=True)
+    fase = models.CharField(
+        max_length=20,
+        choices=FaseStato.choices,
+        blank=True,
+        default="",
+        db_index=True,
+    )
     pratica = models.CharField(
         max_length=20,
         choices=PraticaStato.choices,

@@ -10,6 +10,7 @@ class ClientiTable(tables.Table):
     esperienza_finanziaria = tables.Column(verbose_name="Esperienza Finanziaria")
     visure = tables.Column(verbose_name="Visure")
     stato = tables.Column(verbose_name="Stato", attrs={"td": {"class": "td-nowrap"}})
+    fase = tables.Column(verbose_name="Fase", attrs={"td": {"class": "td-nowrap"}})
 
     azioni = tables.TemplateColumn(
         template_code="""
@@ -25,5 +26,5 @@ class ClientiTable(tables.Table):
 
     class Meta:
         model = Cliente
-        fields = ("nome","cognome","email","telefono","residenza","esperienza_finanziaria","visure","stato")
+        fields = ("nome","cognome","email","telefono","residenza","esperienza_finanziaria","visure","stato","fase")
         attrs = {"class": "table-app"}   # usa i nostri stili + DaisyUI

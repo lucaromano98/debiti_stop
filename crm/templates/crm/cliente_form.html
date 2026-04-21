@@ -74,12 +74,17 @@
           </label>
         </div>
 
-        <!-- Stato / Pratica / Consulente -->
-        <div class="grid gap-4 md:grid-cols-3">
+        <!-- Stato Cliente / Fase / Pratica / Consulente -->
+        <div class="grid gap-4 md:grid-cols-4">
           <label class="form-control md:col-span-1">
-            <div class="label"><span class="label-text">Stato</span></div>
+            <div class="label"><span class="label-text">Stato Cliente</span></div>
             {{ form.stato }}
             {% for err in form.stato.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+          <label class="form-control md:col-span-1">
+            <div class="label"><span class="label-text">Fase</span></div>
+            {{ form.fase }}
+            {% for err in form.fase.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
           </label>
           <label class="form-control md:col-span-1">
             <div class="label"><span class="label-text">Pratica</span></div>

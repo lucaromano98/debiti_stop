@@ -3,9 +3,9 @@ from .models import Cliente, DocumentoCliente, Pratiche, ProfiloUtente, Lead, Co
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ("nome", "cognome", "email", "telefono", "stato", "data_creazione")
+    list_display = ("nome", "cognome", "email", "telefono", "stato", "fase", "data_creazione")
     search_fields = ("nome", "cognome", "email", "telefono")
-    list_filter = ("stato", "data_creazione")
+    list_filter = ("stato", "fase", "data_creazione")
 
 @admin.register(DocumentoCliente)
 class DocumentoClienteAdmin(admin.ModelAdmin):

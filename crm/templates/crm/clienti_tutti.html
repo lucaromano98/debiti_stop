@@ -24,14 +24,11 @@
         </label>
 
         <label class="form-control">
-          <div class="label"><span class="label-text">Stato</span></div>
+          <div class="label"><span class="label-text">Stato Cliente</span></div>
           <select name="stato" class="select select-bordered w-full">
-            <option value="">Tutti gli stati</option>
-            <option value="active"         {% if stato == 'active' %}selected{% endif %}>Attivo</option>
-            <option value="inactive"       {% if stato == 'inactive' %}selected{% endif %}>Non attivo</option>
-            <option value="legal"          {% if stato == 'legal' %}selected{% endif %}>Legale</option>
-            <option value="stragiudiziale" {% if stato == 'stragiudiziale' %}selected{% endif %}>Stragiudiziale</option>
-            <option value="istanza"        {% if stato == 'istanza' %}selected{% endif %}>Istanza di visibilità</option>
+            <option value="">Tutti</option>
+            <option value="active"   {% if stato_cliente == 'active' %}selected{% endif %}>Attivo</option>
+            <option value="inactive" {% if stato_cliente == 'inactive' %}selected{% endif %}>Non attivo</option>
           </select>
         </label>
 
@@ -45,6 +42,19 @@
             <input type="date" name="al" value="{{ al }}" class="input input-bordered w-full" />
           </label>
         </div>
+
+        <label class="form-control md:col-span-1">
+          <div class="label"><span class="label-text">Fase</span></div>
+          <select name="fase" class="select select-bordered w-full">
+            <option value="">Tutte</option>
+            {% for val,label in FASI_CLIENTE %}
+              {% if val %}
+                <option value="{{ val }}" {% if fase_sel == val %}selected{% endif %}>{{ label }}</option>
+              {% endif %}
+            {% endfor %}
+            <option value="__empty__" {% if fase_sel == '__empty__' %}selected{% endif %}>Nessuna</option>
+          </select>
+        </label>
 
         <label class="form-control md:col-span-1">
           <div class="label"><span class="label-text">Consulente</span></div>
@@ -119,8 +129,9 @@
               <a href="{% qurl sort='consulente' page=None %}" class="link link-hover">Consulente</a>
               <span class="sort-raw">▲▼</span>
             </th>
+            <th>Fase</th>
             <th>Pratica</th>
-            <th>Stato</th>
+            <th>Stato Cliente</th>
             <th>Creditore legale</th>
             <th>Email</th>
             <th>Telefono</th>
@@ -141,14 +152,25 @@
             <td class="td-nowrap">{{ c.cognome }}</td>
             <td class="td-nowrap">{{ c.consulente|default:"—" }}</td>
             <td class="td-nowrap">
+              {% if c.fase == 'legale' %}
+                <span class="badge badge-info badge-outline">Legale</span>
+              {% elif c.fase == 'stragiudiziale' %}
+                <span class="badge badge-secondary badge-outline">Stragiudiziale</span>
+              {% elif c.fase == 'istanza' %}
+                <span class="badge badge-warning badge-outline">Istanza di visibilità</span>
+              {% else %}
+                <span class="badge badge-ghost badge-outline">Nessuna</span>
+              {% endif %}
+            </td>
+            <td class="td-nowrap">
               {% if c.pratica == 'buon_fine' %}
                 <span class="badge badge-success badge-outline">Buon fine</span>
               {% elif c.pratica == 'doc_mancanti' %}
                 <span class="badge badge-warning badge-outline">Doc Mancanti</span>
               {% elif c.pratica == 'revoca' %}
                 <span class="badge badge-error badge-outline">Revoca</span>
-              {% elif c.pratica == 'cocluso' %}
-                <span class="badge badge-info badge-outline">Cocluso</span>
+              {% elif c.pratica == 'concluso' %}
+                <span class="badge badge-info badge-outline">Concluso</span>
               {% else %}
                 <span class="badge badge-ghost badge-outline">—</span>
               {% endif %}
@@ -159,12 +181,6 @@
                 <span class="badge-attivo">Attivo</span>
               {% elif c.stato == 'inactive' %}
                 <span class="badge-negativo">Non attivo</span>
-              {% elif c.stato == 'legal' %}
-                <span class="badge-in-corso">Legale</span>
-              {% elif c.stato == 'stragiudiziale' %}
-                <span class="badge-giudiziale">Stragiudiziale</span>
-              {% elif c.stato == 'istanza' %}
-                <span class="badge badge-warning">Istanza di visibilità</span>
               {% else %}
                 <span class="badge badge-neutral">—</span>
               {% endif %}
@@ -193,7 +209,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="12" class="text-center text-base-content/60 py-6">Nessun cliente trovato.</td>
+            <td colspan="14" class="text-center text-base-content/60 py-6">Nessun cliente trovato.</td>
           </tr>
           {% endfor %}
         </tbody>

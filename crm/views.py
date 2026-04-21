@@ -261,7 +261,8 @@ def clienti_tutti(request):
 
     # --- FILTRI ---
     q = request.GET.get("q", "").strip()
-    stato = request.GET.get("stato", "").strip()           # active/inactive/legal
+    stato_cliente = request.GET.get("stato", "").strip()   # active/inactive
+    fase_sel = request.GET.get("fase", "").strip()         # legale/stragiudiziale/istanza
     dal_raw = request.GET.get("dal", "").strip()
     al_raw = request.GET.get("al", "").strip()
     consulente_id = request.GET.get("consulente", "").strip()
@@ -278,8 +279,12 @@ def clienti_tutti(request):
             | Q(telefono__icontains=q)
         )
 
-    if stato in {"active", "inactive", "legal", "stragiudiziale", "istanza"}:
-        qs = qs.filter(stato=stato)
+    if stato_cliente in {"active", "inactive"}:
+        qs = qs.filter(stato=stato_cliente)
+    if fase_sel == "__empty__":
+        qs = qs.filter(fase="")
+    elif fase_sel and fase_sel in dict(Cliente.FaseStato.choices):
+        qs = qs.filter(fase=fase_sel)
     if pratica_sel in dict(Cliente.PraticaStato.choices):
         qs = qs.filter(pratica=pratica_sel)
     elif pratica_sel == "__empty__":
@@ -344,7 +349,8 @@ def clienti_tutti(request):
         "clienti": page_obj.object_list,
         "page_obj": page_obj,
         "q": q,
-        "stato": stato,
+        "stato_cliente": stato_cliente,
+        "fase_sel": fase_sel,
         "consulente_sel": consulente_id,
         "pratica_sel": pratica_sel,
         "dal": dal_raw,
@@ -358,6 +364,7 @@ def clienti_tutti(request):
         "creditore_legale": creditore_legale,
         "CONSULENTI": consulenti,
         "CREDITORI_LEGALI": CreditoreLegale.choices,  # <-- nome corretto (plurale)
+        "FASI_CLIENTE": Cliente.FaseStato.choices,
         "PRATICHE_CLIENTE": Cliente.PraticaStato.choices,
     }
     return render(request, "crm/clienti_tutti.html", ctx)
@@ -367,7 +374,7 @@ def clienti_tutti(request):
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_legali(request):
-    clienti = Cliente.objects.filter(stato="legal").order_by("-data_creazione")
+    clienti = Cliente.objects.filter(fase="legale").order_by("-data_creazione")
     return render(request, "crm/clienti_legali.html", {"clienti": clienti})
 
 
@@ -395,6 +402,7 @@ def cliente_nuovo(request):
         form = ClienteForm(request.POST)
         if form.is_valid():
             cliente = form.save()
+            autore_nome = request.user.get_username() if request.user.is_authenticated else ""
 
             if cliente.perizia_inviata and cliente.stato != "active":
                 cliente.stato = "active"
@@ -408,8 +416,7 @@ def cliente_nuovo(request):
                 Nota.objects.create(
                     cliente=cliente,
                     testo=cliente.note,
-                    # se nel modello c'è un campo autore, usa request.user
-                    autore=getattr(request, "user", None),
+                    autore=autore_nome,
                 )
 
             messages.success(request, "Cliente creato.")
@@ -423,7 +430,7 @@ def cliente_nuovo(request):
 @login_required
 @user_passes_test(has_portal_access)
 def clienti_possibili(request):
-    clienti = Cliente.objects.filter(stato="istanza").order_by("-data_creazione")
+    clienti = Cliente.objects.filter(fase="istanza").order_by("-data_creazione")
     return render(request, "crm/clienti_tutti.html", {"clienti": clienti, "page_obj": None})
 
 
@@ -597,6 +604,7 @@ def cliente_modifica(request, cliente_id):
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             cliente = form.save()
+            autore_nome = request.user.get_username() if request.user.is_authenticated else ""
 
             if cliente.perizia_inviata and cliente.stato != "active":
                 cliente.stato = "active"
@@ -619,7 +627,7 @@ def cliente_modifica(request, cliente_id):
                 if nota_esistente:
                     # aggiorniamo quella esistente
                     nota_esistente.testo = cliente.note
-                    nota_esistente.autore = getattr(request, "user", None)
+                    nota_esistente.autore = autore_nome
                     # se vuoi aggiornare anche la data:
                     # nota_esistente.creata_il = timezone.now()
                     nota_esistente.save()
@@ -628,7 +636,7 @@ def cliente_modifica(request, cliente_id):
                     Nota.objects.create(
                         cliente=cliente,
                         testo=cliente.note,
-                        autore=getattr(request, "user", None),
+                        autore=autore_nome,
                     )
 
             messages.success(request, "Cliente aggiornato.")
