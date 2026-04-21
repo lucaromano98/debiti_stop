@@ -45,6 +45,11 @@ class Cliente(models.Model):
         ("istanza", "Istanza di visibilità"),
         ("stragiudiziale", "Stragiudiziale"),
     )
+    class PraticaStato(models.TextChoices):
+        BUON_FINE = "buon_fine", "Buon fine"
+        DOC_MANCANTI = "doc_mancanti", "Doc Mancanti"
+        REVOCA = "revoca", "Revoca"
+        COCLUSO = "cocluso", "Cocluso"
 
     nome = models.CharField(max_length=100)
     cognome = models.CharField(max_length=100)
@@ -56,6 +61,21 @@ class Cliente(models.Model):
     note = models.TextField(blank=True, null=True)
 
     stato = models.CharField(max_length=50, choices=STATUS_CHOICES, default="active", db_index=True)
+    pratica = models.CharField(
+        max_length=20,
+        choices=PraticaStato.choices,
+        blank=True,
+        default="",
+        db_index=True,
+    )
+    consulente = models.ForeignKey(
+        Consulente,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="clienti",
+        help_text="Consulente assegnato al cliente",
+    )
     data_creazione = models.DateTimeField(auto_now_add=True)
 
     # Flag istanza

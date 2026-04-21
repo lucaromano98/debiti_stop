@@ -74,12 +74,22 @@
           </label>
         </div>
 
-        <!-- Stato -->
-        <div class="grid gap-4 md:grid-cols-2">
+        <!-- Stato / Pratica / Consulente -->
+        <div class="grid gap-4 md:grid-cols-3">
           <label class="form-control md:col-span-1">
             <div class="label"><span class="label-text">Stato</span></div>
             {{ form.stato }}
             {% for err in form.stato.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+          <label class="form-control md:col-span-1">
+            <div class="label"><span class="label-text">Pratica</span></div>
+            {{ form.pratica }}
+            {% for err in form.pratica.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
+          </label>
+          <label class="form-control md:col-span-1">
+            <div class="label"><span class="label-text">Consulente</span></div>
+            {{ form.consulente }}
+            {% for err in form.consulente.errors %}<p class="text-error text-sm mt-1">{{ err }}</p>{% endfor %}
           </label>
         </div>
 

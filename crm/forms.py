@@ -18,7 +18,7 @@ class ClienteForm(forms.ModelForm):
         fields = [
             "nome", "cognome", "email", "telefono",
             "residenza", "esperienza_finanziaria",
-            "note", "stato",
+            "note", "stato", "pratica", "consulente",
             "istanza_visibilita", "documenti_inviati", "perizia_inviata", 
             "creditore_legale", "creditore_legale_altro"
         ]
@@ -31,11 +31,21 @@ class ClienteForm(forms.ModelForm):
             "esperienza_finanziaria": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 1}),
             "note": forms.Textarea(attrs={"class": "textarea textarea-bordered w-full", "rows": 4}),
             "stato": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "pratica": forms.Select(attrs={"class": "select select-bordered w-full"}),
+            "consulente": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "istanza_visibilita": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
             "documenti_inviati": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
             "perizia_inviata": forms.CheckboxInput(attrs={"class": "toggle toggle-primary"}),
         }
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        field = self.fields.get("consulente")
+        if field is not None:
+            field.queryset = Consulente.objects.filter(is_active=True).order_by("nome")
+            field.required = False
+            field.empty_label = "Seleziona consulente"
+
     def clean(self):
         cleaned_data = super().clean()
         creditore_legale = cleaned_data.get("creditore_legale")

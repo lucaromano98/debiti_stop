@@ -45,6 +45,41 @@
             <input type="date" name="al" value="{{ al }}" class="input input-bordered w-full" />
           </label>
         </div>
+
+        <label class="form-control md:col-span-1">
+          <div class="label"><span class="label-text">Consulente</span></div>
+          <select name="consulente" class="select select-bordered w-full">
+            <option value="">Tutti</option>
+            {% for c in CONSULENTI %}
+              <option value="{{ c.id }}" {% if consulente_sel == c.id|stringformat:"s" %}selected{% endif %}>
+                {{ c.nome }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="form-control md:col-span-1">
+          <div class="label"><span class="label-text">Pratica</span></div>
+          <select name="pratica" class="select select-bordered w-full">
+            <option value="">Tutte</option>
+            {% for val,label in PRATICHE_CLIENTE %}
+              <option value="{{ val }}" {% if pratica_sel == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+            <option value="__empty__" {% if pratica_sel == '__empty__' %}selected{% endif %}>Senza pratica</option>
+          </select>
+        </label>
+
+        <label class="form-control md:col-span-1">
+          <div class="label"><span class="label-text">Creditore legale</span></div>
+          <select name="creditore_legale" class="select select-bordered w-full">
+            <option value="">Tutti</option>
+            {% for val,label in CREDITORI_LEGALI %}
+              <option value="{{ val }}" {% if creditore_legale == val %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
       </div>
 
       <div class="flex flex-wrap items-center gap-4 pt-1">
@@ -62,20 +97,6 @@
           <a class="btn btn-ghost" href="{% url 'clienti_tutti' %}">Reset</a>
         </div>
       </div>
-
-        <label class="form-control">
-          <div class="label"><span class="label-text">Creditore legale</span></div>
-          <select name="creditore_legale" class="select select-bordered w-full">
-            <option value="">Tutti</option>
-            {% for val,label in CREDITORI_LEGALI %}
-              <option value="{{ val }}" {% if creditore_legale == val %}selected{% endif %}>
-                {{ label }}
-              </option>
-            {% endfor %}
-          </select>
-        </label>
-
-
     </div>
   </form>
 
@@ -87,20 +108,24 @@
           <tr>
             <th class="th-min">#</th>
             <th>
+              <a href="{% qurl sort='nome' page=None %}" class="link link-hover">Nome</a>
+              <span class="sort-raw">▲▼</span>
+            </th>
+            <th>
               <a href="{% qurl sort='cognome' page=None %}" class="link link-hover">Cognome</a>
               <span class="sort-raw">▲▼</span>
             </th>
             <th>
-              <a href="{% qurl sort='nome' page=None %}" class="link link-hover">Nome</a>
+              <a href="{% qurl sort='consulente' page=None %}" class="link link-hover">Consulente</a>
               <span class="sort-raw">▲▼</span>
             </th>
+            <th>Pratica</th>
             <th>Stato</th>
             <th>Creditore legale</th>
             <th>Email</th>
             <th>Telefono</th>
             <th>Residenza</th>
             <th>Esposizione Finanziaria</th>
-            <th>Visure</th>
             <th>
               <a href="{% qurl sort='data_creazione' page=None %}" class="link link-hover">Creato</a>
               <span class="sort-raw">▲▼</span>
@@ -110,13 +135,24 @@
         </thead>
         <tbody>
           {% for c in clienti %}
-          <tr
-            data-href="{% url 'cliente_dettaglio' c.pk %}" 
-            class="cursor-pointer hover:bg-base-200/10"
-          >
+          <tr class="cliente-row cursor-pointer" data-detail-url="{% url 'cliente_dettaglio' c.pk %}">
             <td class="td-nowrap">{{ forloop.counter0|add:page_obj.start_index }}</td>
-            <td class="td-nowrap">{{ c.cognome }}</td>
             <td class="td-nowrap">{{ c.nome }}</td>
+            <td class="td-nowrap">{{ c.cognome }}</td>
+            <td class="td-nowrap">{{ c.consulente|default:"—" }}</td>
+            <td class="td-nowrap">
+              {% if c.pratica == 'buon_fine' %}
+                <span class="badge badge-success badge-outline">Buon fine</span>
+              {% elif c.pratica == 'doc_mancanti' %}
+                <span class="badge badge-warning badge-outline">Doc Mancanti</span>
+              {% elif c.pratica == 'revoca' %}
+                <span class="badge badge-error badge-outline">Revoca</span>
+              {% elif c.pratica == 'cocluso' %}
+                <span class="badge badge-info badge-outline">Cocluso</span>
+              {% else %}
+                <span class="badge badge-ghost badge-outline">—</span>
+              {% endif %}
+            </td>
 
             <td class="td-nowrap">
               {% if c.stato == 'active' %}
@@ -144,9 +180,8 @@
 
             <td class="td-nowrap">{{ c.email|default:"—" }}</td>
             <td class="td-nowrap">{{ c.telefono|default:"—" }}</td>
-            <td class="td-nowrap">{{ c.residenza|default:"—" }}</td>
-            <td class="max-w-[40ch] truncate">{{ c.esperienza_finanziaria|default:"—" }}</td>
-            <td class="td-nowrap">{{ c.visure|default:"—" }}</td>
+            <td class="td-nowrap max-w-[26ch] truncate" title="{{ c.residenza|default:'' }}">{{ c.residenza|default:"—" }}</td>
+            <td class="td-nowrap max-w-[32ch] truncate" title="{{ c.esperienza_finanziaria|default:'' }}">{{ c.esperienza_finanziaria|default:"—" }}</td>
             <td class="td-nowrap">{{ c.data_creazione|date:"d/m/Y H:i" }}</td>
 
             <td class="td-actions">
@@ -183,24 +218,13 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    const rows = document.querySelectorAll('tbody tr[data-href]');
+    const rows = document.querySelectorAll('.cliente-row');
 
     rows.forEach(function (row) {
-      row.addEventListener('click', function (event) {
-        // se il click è su un link, bottone o input, lascio fare il comportamento normale
-        if (event.target.closest('a, button, input, select, textarea')) {
-          return;
-        }
-
-        const url = this.getAttribute('data-href');
-        if (url) {
-          // se l'utente tiene premuto CTRL / CMD apriamo in nuova scheda
-          if (event.ctrlKey || event.metaKey) {
-            window.open(url, '_blank');
-          } else {
-            window.location.href = url;
-          }
-        }
+      row.addEventListener('dblclick', function (event) {
+        if (event.target.closest('a, button, input, select, textarea, form')) return;
+        const url = row.dataset.detailUrl;
+        if (url) window.location.href = url;
       });
     });
   });

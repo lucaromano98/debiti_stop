@@ -255,7 +255,7 @@ def report_giornaliero_lead(request):
 def clienti_tutti(request):
     qs = (
         Cliente.objects.all()
-        .select_related()
+        .select_related("consulente")
         .prefetch_related("documenti", "pratiche")
     )
 
@@ -264,6 +264,8 @@ def clienti_tutti(request):
     stato = request.GET.get("stato", "").strip()           # active/inactive/legal
     dal_raw = request.GET.get("dal", "").strip()
     al_raw = request.GET.get("al", "").strip()
+    consulente_id = request.GET.get("consulente", "").strip()
+    pratica_sel = request.GET.get("pratica", "").strip()
     has_docs = request.GET.get("has_docs", "").strip()     # "si"
     has_prat = request.GET.get("has_prat", "").strip()     # "si"
     creditore_legale = request.GET.get("creditore_legale", "").strip()
@@ -276,8 +278,14 @@ def clienti_tutti(request):
             | Q(telefono__icontains=q)
         )
 
-    if stato in {"active", "inactive", "legal", "stragiudiziale", "instanza"}:
+    if stato in {"active", "inactive", "legal", "stragiudiziale", "istanza"}:
         qs = qs.filter(stato=stato)
+    if pratica_sel in dict(Cliente.PraticaStato.choices):
+        qs = qs.filter(pratica=pratica_sel)
+    elif pratica_sel == "__empty__":
+        qs = qs.filter(pratica="")
+    if consulente_id.isdigit():
+        qs = qs.filter(consulente_id=int(consulente_id))
 
     # Filtro date (l'avevi tolto per errore)
     dal = _parse_date(dal_raw)
@@ -314,6 +322,10 @@ def clienti_tutti(request):
         qs = qs.order_by("nome", "cognome")
     elif sort == "-nome":
         qs = qs.order_by("-nome", "-cognome")
+    elif sort == "consulente":
+        qs = qs.order_by("consulente__nome", "cognome", "nome")
+    elif sort == "-consulente":
+        qs = qs.order_by("-consulente__nome", "cognome", "nome")
     elif sort == "data_creazione":
         qs = qs.order_by("data_creazione")
     elif sort == "-data_creazione":
@@ -326,12 +338,15 @@ def clienti_tutti(request):
     per_page = _get_per_page(request, 20, 100)
     paginator = Paginator(qs, per_page)
     page_obj = paginator.get_page(request.GET.get("page"))
+    consulenti = Consulente.objects.filter(is_active=True).order_by("nome")
 
     ctx = {
         "clienti": page_obj.object_list,
         "page_obj": page_obj,
         "q": q,
         "stato": stato,
+        "consulente_sel": consulente_id,
+        "pratica_sel": pratica_sel,
         "dal": dal_raw,
         "al": al_raw,
         "has_docs": has_docs,
@@ -341,7 +356,9 @@ def clienti_tutti(request):
 
         # filtro creditore
         "creditore_legale": creditore_legale,
+        "CONSULENTI": consulenti,
         "CREDITORI_LEGALI": CreditoreLegale.choices,  # <-- nome corretto (plurale)
+        "PRATICHE_CLIENTE": Cliente.PraticaStato.choices,
     }
     return render(request, "crm/clienti_tutti.html", ctx)
 
