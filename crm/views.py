@@ -912,10 +912,10 @@ def nota_elimina(request, nota_id):
 
 @login_required
 @user_passes_test(has_portal_access)
-def lead_lista(request, stato_slug=None):
+def lead_lista(request, stato_slug=None, solo_acquisiti=False):
     qs = (
         Lead.objects.filter(is_archiviato=False)
-        .select_related("consulente")
+        .select_related("consulente", "convertito_cliente")
         .prefetch_related(
             Prefetch(
                 "note_entries",
@@ -924,10 +924,14 @@ def lead_lista(request, stato_slug=None):
         )
     )
 
+    vista_acquisiti = bool(solo_acquisiti)
     stato_vista = None
     stato_vista_label = None
     stato_slug_actual = None
-    if stato_slug and stato_slug in STATO_SLUG_MAP:
+    if vista_acquisiti:
+        qs = qs.filter(convertito=True)
+        stato_vista_label = "Clienti acquisiti"
+    elif stato_slug and stato_slug in STATO_SLUG_MAP:
         stato_operativo_forzato = STATO_SLUG_MAP[stato_slug]
         qs = qs.filter(stato_operativo=stato_operativo_forzato)
         stato_vista = stato_operativo_forzato
@@ -1008,14 +1012,17 @@ def lead_lista(request, stato_slug=None):
     # Default: appuntamenti prossimi prima, esitati in fondo
     sort = sort_map.get(sort_raw)
     if sort is None:
-        stati_chiusi = {"consulenza_eff", "non_competenza", "non_contattare", "numero_errato", "blocco_chiamate", "cliente_non_interessato"}
-        qs = qs.annotate(
-            _ordine_fase=Case(
-                When(stato_operativo__in=stati_chiusi, then=Value(1)),
-                default=Value(0),
-                output_field=IntegerField(),
-            )
-        ).order_by("_ordine_fase", "-primo_contatto", "appuntamento_previsto", "-creato_il")
+        if vista_acquisiti:
+            qs = qs.order_by("-convertito_il", "-creato_il")
+        else:
+            stati_chiusi = {"consulenza_eff", "non_competenza", "non_contattare", "numero_errato", "blocco_chiamate", "cliente_non_interessato"}
+            qs = qs.annotate(
+                _ordine_fase=Case(
+                    When(stato_operativo__in=stati_chiusi, then=Value(1)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            ).order_by("_ordine_fase", "-primo_contatto", "appuntamento_previsto", "-creato_il")
     elif sort == "-primo_contatto":
         qs = qs.order_by("-primo_contatto", "-creato_il")
     elif sort == "primo_contatto":
@@ -1050,7 +1057,24 @@ def lead_lista(request, stato_slug=None):
         "consulenti": consulenti,
         "appt": appt,
         "esiti_selezionati": esiti_list,
+        "vista_acquisiti": vista_acquisiti,
     })
+
+
+@login_required
+@user_passes_test(has_portal_access)
+@require_POST
+def lead_acquisisci_cliente(request, lead_id):
+    lead = get_object_or_404(Lead, pk=lead_id, is_archiviato=False)
+    if lead.convertito and lead.convertito_cliente_id:
+        messages.info(request, "Questo lead risulta già acquisito: apri la scheda cliente collegata.")
+        return redirect("cliente_dettaglio", cliente_id=lead.convertito_cliente_id)
+    cliente = converti_lead_in_cliente(lead, request.user)
+    messages.success(
+        request,
+        f"Cliente acquisito: {cliente.nome} {cliente.cognome}. Puoi completare anagrafica e documenti dalla scheda cliente.",
+    )
+    return redirect("cliente_dettaglio", cliente_id=cliente.id)
 
 
 @login_required

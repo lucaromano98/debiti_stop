@@ -18,6 +18,7 @@ from .views import (
     # lead
     lead_lista, lead_nuovo, lead_modifica, lead_dettaglio, lead_elimina, lead_ricontatta, lead_nota_aggiungi,
     lead_toggle_consulenza, lead_toggle_no_risposta, lead_toggle_msg, lead_aggiorna_stato_operativo,
+    lead_acquisisci_cliente,
     # schede consulenza
     scheda_consulenza_nuova, scheda_consulenza_dettaglio,
     scheda_consulenza_modifica, scheda_consulenza_elimina, scheda_consulenza_pdf,
@@ -83,9 +84,11 @@ urlpatterns = [
 
     # Lead
     path("leads/", lead_lista, name="lead_lista"),
+    path("leads/clienti-acquisiti/", lead_lista, {"solo_acquisiti": True}, name="lead_lista_acquisiti"),
     path("leads/stato/<slug:stato_slug>/", lead_lista, name="lead_lista_stato"),
     path("leads/nuovo/", lead_nuovo, name="lead_nuovo"),
     path("leads/<int:lead_id>/modifica/", lead_modifica, name="lead_modifica"),
+    path("leads/<int:lead_id>/acquisisci-cliente/", lead_acquisisci_cliente, name="lead_acquisisci_cliente"),
     path("leads/<int:lead_id>/", lead_dettaglio, name="lead_dettaglio"),
     path("leads/<int:lead_id>/toggle-consulenza/", lead_toggle_consulenza, name="lead_toggle_consulenza"),
     path("leads/<int:lead_id>/toggle-no-risposta/", lead_toggle_no_risposta, name="lead_toggle_no_risposta"),

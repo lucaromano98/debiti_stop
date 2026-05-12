@@ -232,7 +232,7 @@ tr.row-ricontatti-3 td { color: #292524; }
 
       <div class="flex items-center gap-2 justify-end">
         <button type="submit" class="btn btn-primary">Filtra</button>
-        <a class="btn btn-ghost" href="{% if stato_slug_actual %}{% url 'lead_lista_stato' stato_slug=stato_slug_actual %}{% else %}{% url 'lead_lista' %}{% endif %}">Reset</a>
+        <a class="btn btn-ghost" href="{% if vista_acquisiti %}{% url 'lead_lista_acquisiti' %}{% elif stato_slug_actual %}{% url 'lead_lista_stato' stato_slug=stato_slug_actual %}{% else %}{% url 'lead_lista' %}{% endif %}">Reset</a>
       </div>
     </div>
   </form>
@@ -365,6 +365,9 @@ tr.row-ricontatti-3 td { color: #292524; }
             <td class="td-actions">
               <div class="join">
                 <a href="{% url 'lead_dettaglio' l.pk %}" class="btn btn-ghost btn-sm join-item">Apri</a>
+                {% if l.convertito_cliente_id %}
+                <a href="{% url 'cliente_dettaglio' l.convertito_cliente_id %}" class="btn btn-success btn-outline btn-sm join-item" title="Scheda cliente collegata">Cliente</a>
+                {% endif %}
                 <a href="{% url 'lead_modifica' l.pk %}" class="btn btn-outline btn-sm join-item">Modifica</a>
                 <form method="post" action="{% url 'lead_elimina' l.pk %}" class="inline join-item"
                       onsubmit="return confirm('Eliminare definitivamente questo lead?');">

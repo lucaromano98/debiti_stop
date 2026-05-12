@@ -267,6 +267,14 @@
                 Possibili clienti
               </a>
             </li>
+            <li>
+              <a href="{% url 'lead_lista_acquisiti' %}"
+                class="block rounded px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900
+                       dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100
+                       {% if curr == 'lead_lista_acquisiti' %}font-semibold text-slate-900 dark:text-slate-100{% endif %}">
+                Clienti acquisiti
+              </a>
+            </li>
             {% for slug, label in sidebar_lead_stati %}
             <li>
               <a href="{% url 'lead_lista_stato' stato_slug=slug %}"

@@ -18,6 +18,9 @@
             {% else %}
               <span class="badge badge-info badge-outline align-middle ml-2">In corso</span>
             {% endif %}
+            {% if lead.convertito and lead.convertito_cliente_id %}
+              <span class="badge badge-success align-middle ml-2">Cliente acquisito</span>
+            {% endif %}
           </h1>
 
           <div class="mt-2 grid gap-x-8 gap-y-1 sm:grid-cols-2 lg:grid-cols-3 text-sm">
@@ -32,6 +35,18 @@
 
         <div class="flex flex-wrap items-center gap-2">
           <a href="{% url 'lead_modifica' lead.id %}" class="btn btn-ghost"><i data-lucide="pencil" class="w-5 h-5 inline-block align-middle mr-1"></i>Modifica</a>
+          {% if lead.convertito and lead.convertito_cliente_id %}
+          <a href="{% url 'cliente_dettaglio' lead.convertito_cliente_id %}" class="btn btn-success gap-1">
+            <i data-lucide="user-check" class="w-5 h-5 inline-block align-middle"></i>Scheda cliente
+          </a>
+          {% else %}
+          <form id="form-acquisisci-cliente" method="post" action="{% url 'lead_acquisisci_cliente' lead.id %}" class="inline">
+            {% csrf_token %}
+            <button type="button" id="btn-apri-modale-acquisisci" class="btn btn-success gap-1">
+              <i data-lucide="user-plus" class="w-5 h-5 inline-block align-middle"></i>Acquisisci cliente
+            </button>
+          </form>
+          {% endif %}
           <a href="{% url 'lead_lista_stato' stato_slug='non-contattare' %}" class="btn btn-ghost"><i data-lucide="clipboard-list" class="w-5 h-5 inline-block align-middle mr-1"></i>Non contattare</a>
           <a href="{% url 'lead_lista' %}" class="btn"><i data-lucide="arrow-left" class="w-5 h-5 inline-block align-middle mr-1"></i>Torna alla lista</a>
           <form method="post" action="{% url 'lead_elimina' lead.id %}" class="inline"
@@ -208,4 +223,87 @@
   </section>
 
 </div>
+
+<dialog id="modale-acquisisci-cliente" class="modal" aria-labelledby="modale-acquisisci-titolo">
+  <div class="modal-box !max-w-2xl w-[min(96vw,42rem)] rounded-2xl p-6 sm:p-8 shadow-2xl sm:my-8">
+    <div class="rounded-xl bg-gradient-to-br from-success/15 via-base-200/40 to-base-100 p-4 sm:p-5 mb-6 border border-base-300/50">
+      <div class="flex items-start justify-between gap-5 sm:gap-6">
+        <div class="flex min-w-0 flex-1 items-start gap-5 sm:gap-6">
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-success/45 bg-success/15 text-success shadow-sm box-border overflow-visible">
+            <i data-lucide="user-plus" class="h-7 w-7 shrink-0" aria-hidden="true"></i>
+          </div>
+          <div class="min-w-0 flex-1 space-y-2 pt-0.5 pr-2">
+            <h3 id="modale-acquisisci-titolo" class="text-xl sm:text-2xl font-bold tracking-tight leading-snug">
+              Acquisisci cliente
+            </h3>
+            <p class="text-sm sm:text-[0.9375rem] text-base-content/70 leading-relaxed max-w-prose">
+              Stai per trasformare il lead <span class="font-semibold text-base-content">{{ lead.nome }} {{ lead.cognome }}</span> in un cliente in anagrafica.
+            </p>
+          </div>
+        </div>
+        <form method="dialog" class="shrink-0 pt-0.5">
+          <button type="submit" class="btn btn-sm btn-ghost btn-square rounded-full" aria-label="Chiudi">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-16 sm:gap-20">
+      <div class="space-y-4 text-[0.9375rem] sm:text-base leading-relaxed text-base-content/85">
+        <p class="font-semibold text-base-content text-base">
+          Cosa succede dopo la conferma
+        </p>
+        <ul class="list-none space-y-4 pl-0 max-w-prose">
+          <li class="flex gap-4">
+            <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-success"></span>
+            <span>Viene creato (o aggiornato) un record in <strong class="text-base-content">Clienti tutti</strong> con nome, contatti, consulente, creditori e le informazioni utili già presenti sul lead.</span>
+          </li>
+          <li class="flex gap-4">
+            <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-success"></span>
+            <span>Il lead resta collegato al cliente: potrai sempre risalire da qui alla scheda anagrafica.</span>
+          </li>
+          <li class="flex gap-4">
+            <span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-success"></span>
+            <span>Dalla scheda cliente potrai completare residenza, documenti, pratiche e tutto il percorso operativo come di consueto.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-base-300/60 bg-base-200/40 px-6 py-6 sm:px-8 sm:py-7">
+        <p class="text-xs font-semibold uppercase tracking-wide text-base-content/50 mb-4">Nota sui duplicati</p>
+        <p class="text-sm sm:text-[0.9375rem] leading-relaxed text-base-content/75 max-w-prose">
+          Se in anagrafica esiste già un cliente con la <strong class="text-base-content/90">stessa email o telefono</strong>, verrà riutilizzato quel record e integrato con i dati mancanti, senza creare un doppione.
+        </p>
+      </div>
+    </div>
+
+    <div class="modal-action flex-wrap justify-end gap-3 border-t border-base-300/50 pt-6 mt-6 sm:pt-7">
+      <form method="dialog">
+        <button type="submit" class="btn btn-ghost min-w-[6.5rem]">Annulla</button>
+      </form>
+      <button type="submit" form="form-acquisisci-cliente" class="btn btn-success min-w-[11rem] gap-2">
+        <i data-lucide="check" class="h-4 w-4" aria-hidden="true"></i>
+        Conferma acquisizione
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button type="submit">close</button>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  (function () {
+    var btn = document.getElementById('btn-apri-modale-acquisisci');
+    var dlg = document.getElementById('modale-acquisisci-cliente');
+    if (!btn || !dlg) return;
+    btn.addEventListener('click', function () {
+      if (typeof dlg.showModal === 'function') dlg.showModal();
+    });
+  })();
+</script>
 {% endblock %}
